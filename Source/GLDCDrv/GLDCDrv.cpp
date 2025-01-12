@@ -588,16 +588,6 @@ void UGLDCRenderDevice::EnsureComposeSize( const DWORD NewSize )
 	}
 }
 
-static inline _WORD RGB888ToARGB1555( const FColor& Col )
-{
-	return ( ( Col.B & 0xF8 ) >> 3 ) | ( ( Col.G & 0xF8 ) << 2 ) | ( ( Col.R & 0xF8 ) << 7 ) | 0x8000;
-}
-
-static inline _WORD BGRA7777ToRGB565( const BYTE* Src )
-{
-	return ( ( Src[0] & 0x7C ) >> 2 ) | ( ( Src[1] & 0x7E ) << 4 ) | ( ( Src[2] & 0x7C ) << 9 );
-}
-
 void* UGLDCRenderDevice::VerticalUpscale( const INT USize, const INT VSize, const INT VTimes )
 {
 	DWORD i;
@@ -648,9 +638,9 @@ void* UGLDCRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor* 
 
 	// convert palette; if texture is masked, make first entry transparent
 	_WORD DstPal[NUM_PAL_COLORS];
-	DstPal[0] = Masked ? 0 : RGB888ToARGB1555( Palette[0] );
+	DstPal[0] = Masked ? 0 : Palette[0].RGB888ToARGB1555();
 	for( i = 1; i < ARRAY_COUNT( DstPal ); ++i )
-		DstPal[i] = RGB888ToARGB1555( Palette[i] );
+		DstPal[i] = Palette[i].RGB888ToARGB1555();
 
 	// convert and upscale texture horizontally to width = 8 if needed
 	const INT UTimes = MinTexSize / USize;
@@ -695,16 +685,16 @@ void* UGLDCRenderDevice::ConvertTextureMipBGRA7777( const FMipmap* Mip )
 	INT USize = Mip->USize;
 	INT VSize = Mip->VSize;
 	_WORD* Dst = (_WORD*)Compose;
-	const BYTE* Src = (const BYTE*)Mip->DataPtr;
+	const FColor* Src = (const FColor*)Mip->DataPtr;
 	const DWORD Count = USize * VSize;
 
 	EnsureComposeSize( Count * 2 );
 
 	// convert and upscale texture horizontally to width = 8 if needed
 	const INT UTimes = MinTexSize / USize;
-	for( i = 0; i < Count; ++i, Src += 4 )
+	for( i = 0; i < Count; ++i, ++Src )
 	{
-		const _WORD C = BGRA7777ToRGB565( Src );
+		const _WORD C = Src->BGRA7777ToRGB565();
 		switch( UTimes )
 		{
 			case 8:

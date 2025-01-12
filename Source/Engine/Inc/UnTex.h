@@ -105,6 +105,14 @@ public:
 	{
 		return ((D&0xf8) << 7) + ((D&0xf800) >> 6) + ((D&0xf80000) >> 19);
 	}
+	inline _WORD RGB888ToARGB1555() const
+	{
+		return ((B & 0xF8) >> 3) | ((G & 0xF8) << 2) | ((R & 0xF8) << 7) | 0x8000;
+	}
+	inline _WORD BGRA7777ToRGB565() const
+	{
+		return ((R & 0x7C) >> 2) | ((G & 0x7E) << 4) | ((B & 0x7C) << 9);
+	}
 	FVector Plane() const
 	{
 		return FPlane(R/255.f,G/255.f,B/255.f,A/255.0);
