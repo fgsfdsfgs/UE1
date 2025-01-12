@@ -186,10 +186,6 @@ if(USE_SDL)
   add_definitions(-DPLATFORM_SDL)
 endif()
 
-if(USE_FILE_POOL)
-  add_definitions(-DUSE_FILE_POOL)
-endif()
-
 if(LOW_MEMORY)
   add_definitions(-DPLATFORM_LOW_MEMORY)
 endif()
