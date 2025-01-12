@@ -9,6 +9,10 @@
 #ifdef PLATFORM_DREAMCAST
 #include <kos.h>
 #include <malloc.h>
+#include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
 KOS_INIT_FLAGS( INIT_IRQ | INIT_THD_PREEMPT | INIT_DEFAULT_ARCH );
 #endif
 
@@ -31,6 +35,45 @@ class FExecHook : public FExec
 FExecHook GLocalHook;
 DLL_EXPORT FExec* GThisExecHook = &GLocalHook;
 
+#ifdef PLATFORM_DREAMCAST
+
+//
+// Display error and lock up.
+//
+void FatalError( const char* Fmt, ... ) __attribute__((noreturn));
+void FatalError( const char* Fmt, ... )
+{
+	char Msg[4096];
+
+	va_list Args;
+	va_start( Args, Fmt );
+	vsnprintf( Msg, sizeof( Msg ), Fmt, Args );
+	va_end( Args );
+
+	printf( "\n%s\n", Msg );
+
+	arch_stk_trace( 2 );
+
+	pvr_shutdown();
+	vid_init( DM_640x480, PM_RGB555 );
+	pvr_init_defaults();
+
+	bfont_draw_str( vram_s, 640, true, Msg );
+
+	while (true)
+		thd_sleep( 100 );
+}
+
+//
+// Handle assertion failure.
+//
+void HandleAssertFail( const char* File, int Line, const char* Expr, const char* Msg, const char* Func )
+{
+	FatalError( "ASSERTION FAILED:\nLoc: %s:%d (%s)\nExpr: %s\n%s", File, Line, Func, Expr, Msg);
+}
+
+#endif
+
 //
 // Handle an error.
 //
@@ -44,6 +87,8 @@ void HandleError()
 	GErrorHist[ARRAY_COUNT(GErrorHist)-1]=0;
 #ifdef PLATFORM_SDL
 	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, LocalizeError("Critical"), GErrorHist, SDL_GetKeyboardFocus() );
+#elif defined(PLATFORM_DREAMCAST)
+	FatalError( "FATAL ERROR:\n%s", GErrorHist );
 #endif
 }
 
@@ -155,6 +200,10 @@ int main( int argc, const char** argv )
 	hInstance = NULL;
 	// Remember arguments since we don't have GetCommandLine().
 	appSetCmdLine( argc, argv );
+#endif
+
+#ifdef PLATFORM_DREAMCAST
+	assert_set_handler( HandleAssertFail );
 #endif
 
 	GIsStarted = 1;
