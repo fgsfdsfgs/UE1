@@ -303,8 +303,16 @@ void UTexture::Serialize( FArchive& Ar )
 		VBits = FLogTwo(VSize);
 	}
 #ifdef PLATFORM_LOW_MEMORY
-	if( Ar.IsLoading() && !GIsEditor && Mips.Num() > 1 )
-		Mips.Remove( 1, Mips.Num() - 1 );
+	if( Ar.IsLoading() && !GIsEditor )
+	{
+		if( Mips.Num() > 1 )
+			Mips.Remove( 1, Mips.Num() - 1 );
+		if( TextureFlags & (TF_Parametric|TF_Realtime|TF_RealtimePalette) )
+		{
+			if( MaxFrameRate == 0.f || MaxFrameRate > 30.f )
+				MaxFrameRate = 30.f;
+		}
+	}
 	if( BumpMap )
 	{
 		if( BumpMap->Mips.Num() )
