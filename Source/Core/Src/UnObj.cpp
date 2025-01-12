@@ -1508,6 +1508,10 @@ UBOOL FObjectManager::Exec( const char* Cmd, FOutputDevice* Out )
 			int Num=0, TotalCount=0, TotalSize=0, Count[MAX], Size[MAX];
 			UClass* TypeList[MAX];
 
+#ifdef PLATFORM_DREAMCAST
+			Out = GSystem;
+#endif
+
 			Out->Log( "Objects:" );
 			for( FObjectIterator It; It; ++It )
 			{
@@ -1543,9 +1547,9 @@ UBOOL FObjectManager::Exec( const char* Cmd, FOutputDevice* Out )
 			{
 				UClass* Type = TypeList[i];
 				if( Type && (CheckType==NULL || CheckType==Type) )
-					Out->Logf(" %s...%i (%iK)", Type->GetName(), Count[i], Size[i]/1000 );
+					Out->Logf(" %s...%i (%.2fK)", Type->GetName(), Count[i], (FLOAT)Size[i]/1000.0f );
 			}
-			Out->Logf( "%i Objects (%.3fM)",TotalCount,(FLOAT)TotalSize/1000000.0 );
+			Out->Logf( "%i Objects (%.3fM)",TotalCount,(FLOAT)TotalSize/1000000.0f );
 			return 1;
 		}
 		else return 0;

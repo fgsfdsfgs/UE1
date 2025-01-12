@@ -331,12 +331,16 @@ UBOOL UTcpNetDriver::Init( UBOOL Connect, FNetworkNotify* InNotify, FURL& URL, c
 		return 0;
 
 	// Get this host name.
+#ifdef PLATFORM_DREAMCAST
+	appStrcpy( HostName, "localhost" );
+#else
 	if( gethostname( HostName, 256 ) )
 	{
 		appSprintf( Error256, "Not Connected To The Internet" );
 		return 0;
 	}
-    debugf( NAME_Init, "WinSock gethostname: %s", HostName );
+#endif
+	debugf( NAME_Init, "WinSock gethostname: %s", HostName );
 	char Home[256];
 	if( Parse(appCmdLine(),"MULTIHOME=",Home,ARRAY_COUNT(Home)) )
 	{

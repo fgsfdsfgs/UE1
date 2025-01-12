@@ -1,5 +1,5 @@
 /*=============================================================================
-	UnPlat.cpp: Platform-specific routines-specific routines.
+	UnPlat.cpp: Platform-specific routines.
 	Copyright 1997 Epic MegaGames, Inc. This software is a trade secret.
 
 	Revision history:
@@ -12,6 +12,8 @@
 #pragma warning( disable : 4201 )
 #include <direct.h>
 #include <io.h>
+#elif defined(PLATFORM_DREAMCAST)
+#include <kos.h>
 #else
 #error "Unsupported platform."
 #endif
@@ -473,6 +475,17 @@ void appInit()
 	GPageSize=SI.dwPageSize;
 	GProcessorCount=SI.dwNumberOfProcessors;
 	debugf( NAME_Init, "CPU Page size=%i, Processors=%i", SI.dwPageSize, SI.dwNumberOfProcessors );
+#elif defined(PLATFORM_DREAMCAST)
+	debugf( NAME_Init, "Detected: Dreamcast / KOS" );
+
+	// CPU speed.
+	DOUBLE Frequency = 1000000.0; // we're using a microsecond timer
+	GSecondsPerCycle = 1.0 / Frequency;
+	debugf( NAME_Init, "CPU Timer Freq=%f Hz", (FLOAT)Frequency );
+
+	// Get CPU info.
+	GPageSize = 4096;
+	GProcessorCount = 1;
 #elif defined(PLATFORM_SDL)
 	debugf( NAME_Init, "Detected: %s", SDL_GetPlatform() );
 
@@ -735,6 +748,8 @@ CORE_API DOUBLE appSeconds()
 	return (DOUBLE)ret.QuadPart * GSecondsPerCycle;
 #elif defined(PLATFORM_SDL)
 	return (DOUBLE)SDL_GetPerformanceCounter() * GSecondsPerCycle;
+#elif defined(PLATFORM_DREAMCAST)
+	return (DOUBLE)timer_us_gettime64() * GSecondsPerCycle;
 #else
 	return 0;
 #endif
@@ -748,6 +763,8 @@ CORE_API DWORD appCycles()
 	return ret.LowPart;
 #elif defined(PLATFORM_SDL)
 	return SDL_GetPerformanceCounter();
+#elif defined(PLATFORM_DREAMCAST)
+	return (DOUBLE)timer_us_gettime64();
 #else
 	return 0;
 #endif
@@ -883,11 +900,13 @@ UBOOL appFindPackageFile( const char* In, const FGuid* Guid, char* Out )
 		}
 		if( Found )
 		{
+#ifndef PLATFORM_DREAMCAST
 			if( i==ARRAY_COUNT(GSys->Paths) )
 			{
 				// Update cache access time.
 				_utime( Out, NULL );
 			}
+#endif
 			return 1;
 		}
 	}
@@ -1041,6 +1060,8 @@ void FGlobalPlatform::WriteBinary( const void* Data, INT Length, EName Event )
 			OutputDebugString( ": " );
 			OutputDebugString( (char*)Data );
 			OutputDebugString( "\n" );
+#elif defined(PLATFORM_DREAMCAST)
+			printf( "%s: %s\n", *EventName, (char*)Data );
 #endif
 			if( GLogFile )
 			{
@@ -1164,6 +1185,7 @@ void appError( const char* Msg )
 		GIsCriticalError = 1;
 		debugf( NAME_Critical, "appError called:" );
 		debugf( NAME_Critical, Msg );
+		appDumpAllocs( GSystem );
 		GObj.ShutdownAfterError();
 		strncpy( GErrorHist, Msg, ARRAY_COUNT(GErrorHist) );
 		strncat( GErrorHist, "\r\n\r\n", ARRAY_COUNT(GErrorHist) );
@@ -1570,6 +1592,8 @@ CORE_API const char* appBaseDir()
 		char* BasePath = SDL_GetBasePath();
 		appStrncpy( BaseDir, BasePath, sizeof(BaseDir) );
 		SDL_free( BasePath );
+#elif defined(PLATFORM_DREAMCAST)
+		strcpy( BaseDir, "/cd/System/" );
 #endif
 		// Fallback to CWD.
 		if ( !BaseDir[0] )

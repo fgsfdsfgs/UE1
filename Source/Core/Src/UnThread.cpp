@@ -14,6 +14,11 @@
 
 #include "CorePrivate.h"
 
+#ifdef PLATFORM_DREAMCAST
+#define pthread_setname_np(t, n) (void)(n)
+#define pthread_mutexattr_settype(a, v) (void)(a)
+#endif
+
 CORE_API UTHREAD appThreadSpawn( THREAD_FUNC Func, void* Arg, const char* Name, UBOOL bDetach, DWORD* OutThreadId )
 {
 	guard(appThreadSpawn);

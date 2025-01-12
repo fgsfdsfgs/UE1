@@ -1,6 +1,15 @@
+#ifdef PLATFORM_SDL
 #include "SDL2/SDL.h"
+#endif
+
 #ifdef PLATFORM_WIN32
 #include <windows.h>
+#endif
+
+#ifdef PLATFORM_DREAMCAST
+#include <kos.h>
+#include <malloc.h>
+KOS_INIT_FLAGS( INIT_IRQ | INIT_THD_PREEMPT | INIT_DEFAULT_ARCH );
 #endif
 
 #include "Engine.h"
@@ -33,7 +42,9 @@ void HandleError()
 	GObj.ShutdownAfterError();
 	debugf( NAME_Exit, "Exiting due to exception" );
 	GErrorHist[ARRAY_COUNT(GErrorHist)-1]=0;
+#ifdef PLATFORM_SDL
 	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, LocalizeError("Critical"), GErrorHist, SDL_GetKeyboardFocus() );
+#endif
 }
 
 //
@@ -75,6 +86,10 @@ UEngine* InitEngine()
 	// Init engine.
 	UEngine* Engine = ConstructClassObject<UEngine>( EngineClass );
 	Engine->Init();
+
+#ifdef PLATFORM_DREAMCAST
+	malloc_stats();
+#endif
 
 	return Engine;
 

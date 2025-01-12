@@ -14,6 +14,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <malloc.h>
 
 #ifdef PLATFORM_WIN32
 #include <direct.h>
@@ -24,6 +25,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <errno.h>
 #endif
 
 /*-----------------------------------------------------------------------------
@@ -209,12 +211,15 @@ CORE_API void appDumpAllocs( FOutputDevice* Out )
 	INT Count=0;
 	for( FTrackedAllocation* A = GTrackedAllocations; A; A=A->Next )
 	{
-		//Out->Logf( NAME_Exit, "Unfreed: %s (%i)", A->Name, A->Size );
+		Out->Logf( NAME_Exit, "Unfreed: %s / %p / %i", A->Name, A->Ptr, A->Size );
 		Count += A->Size;
 	}
 	debugf( "Total: %fM", Count / 1024.0 / 1024.0 );
 #else
-	debugf( NAME_Exit, "Allocation checking disabled" );
+	debugf( NAME_Exit, "Allocation checking disabled." );
+#endif
+#ifdef PLATFORM_DREAMCAST
+	malloc_stats();
 #endif
 	unguard;
 }
@@ -268,11 +273,13 @@ CORE_API void* appRealloc( void* Ptr, INT NewSize, const char* Tag )
 		if( NewSize==0 )
 		{
 			DeleteTrackedAllocation( Ptr );
+			free( Ptr );
 			return NULL;
 		}
 		else
 		{
-			for( FTrackedAllocation *A = GTrackedAllocations; A; A=A->Next )
+			FTrackedAllocation *A;
+			for( A = GTrackedAllocations; A; A=A->Next )
 				if( A->Ptr == Ptr )
 					break;
 			if( !A )
@@ -384,13 +391,13 @@ CORE_API INT appFSize( const char* fname )
 	if( f == NULL )
 		return -1;
 
-	if( fseek( f, 0, SEEK_END ) != 0 )
+	if( appFseek( f, 0, SEEK_END ) != 0 )
 	{
-		fclose( f );
+		appFclose( f );
 		return -1;
 	}
-	result = ftell( f );
-	fclose( f );
+	result = appFtell( f );
+	appFclose( f );
 	return result;
 	unguard;
 }
@@ -546,8 +553,21 @@ CORE_API TArray<FString> appFindFiles( const char* Spec )
 //
 // Standard file functions.
 //
-CORE_API FILE* appFopen( const char* Path, const char* Mode )
+CORE_API FILE* appFopen( const char* InPath, const char* Mode )
 {
+#ifdef PLATFORM_DREAMCAST
+	// Fixup slashes.
+	char Path[128] = { 0 };
+	appStrncpy( Path, InPath, sizeof( Path ) );
+	for( INT i = 0; i < 128 && Path[i]; ++i )
+	{
+		if( Path[i] == '\\' )
+			Path[i] = '/';
+	}
+#else
+	const char* Path = InPath;
+#endif
+
 	FILE* F = fopen( Path, Mode );
 
 #ifdef PLATFORM_CASE_SENSITIVE_FS

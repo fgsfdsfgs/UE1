@@ -354,6 +354,7 @@ struct FTextureInfo
 	FColor*				Palette;		// Palette colors.
 	DWORD				TextureFlags;	// From ETextureFlags.
 	FMipmap*			Mips[MAX_MIPS];	// Array of NumMips of mipmaps.
+	UTexture*			Texture;	// Owning texture.
 };
 
 /*-----------------------------------------------------------------------------

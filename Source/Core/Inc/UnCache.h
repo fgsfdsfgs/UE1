@@ -120,7 +120,11 @@ public:
 private:
 	// Constants.
 	enum {COST_INFINITE=0x1000000};
+#ifdef PLATFORM_LOW_MEMORY
+	enum {HASH_COUNT=8192};
+#else
 	enum {HASH_COUNT=16384};
+#endif
 	enum {IGNORE_SIZE=256};
 
 	// Variables.

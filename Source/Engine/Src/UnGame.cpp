@@ -101,12 +101,14 @@ void UGameEngine::Init()
 
 	// Load the entry level.
 	char Error256[256];
+#ifndef PLATFORM_LOW_MEMORY
 	if( Client )
 	{
 		if( !LoadMap( FURL("Entry"), NULL, Error256 ) )
 			appErrorf( LocalizeError("LoadEntry"), Error256 );
 		Exchange( GLevel, GEntry );
 	}
+#endif
 
 	// Create default URL.
 	FURL DefaultURL;
@@ -537,6 +539,11 @@ ULevel* UGameEngine::LoadMap( const FURL& URL, UPendingLevel* Pending, char* Err
 			GObj.SavePackage( GLevel->GetParent(), GLevel, 0, Filename );
 		}
 		GLevel = NULL;
+		// Purge unused objects and flush caches.
+		guard(CleanupAfterExit);
+		Flush();
+		GObj.CollectGarbage( GSystem, RF_Intrinsic );
+		unguard;
 	}
 	unguard;
 
@@ -803,6 +810,7 @@ ULevel* UGameEngine::LoadMap( const FURL& URL, UPendingLevel* Pending, char* Err
 	GLevel->Add( Actors.Num() );
 	for( i=0; i<Actors.Num(); i++ )
 		GLevel->Element(i) = Actors(i);
+	Actors.Empty();
 	unguard;
 
 	// Cleanup profiling.

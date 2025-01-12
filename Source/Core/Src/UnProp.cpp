@@ -119,6 +119,7 @@ void UProperty::Serialize( FArchive& Ar )
 //
 void UProperty::ExportCPP( FOutputDevice& Out, UBOOL IsLocal, UBOOL IsParm )
 {
+#ifndef PLATFORM_LOW_MEMORY
 	guard(UProperty::ExportCPP)
 	char ArrayStr[80]="";
 	if( IsParm && IsA(UStringProperty::StaticClass) && !(PropertyFlags & CPF_OutParm) )
@@ -152,6 +153,7 @@ void UProperty::ExportCPP( FOutputDevice& Out, UBOOL IsLocal, UBOOL IsParm )
 		Out.Logf( " %s%s", GetName(), ArrayStr );
 	}
 	unguard;
+#endif
 }
 
 //

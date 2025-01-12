@@ -6,7 +6,7 @@
 		* Created by Steven Polge 3/97
 =============================================================================*/
 
-#define DEBUGGINGPATHS  1 //1 to put path info in log
+#define DEBUGGINGPATHS  0 //1 to put path info in log
 #define MAXMARKERS 3000 //bound number of turn markers
 #define MAXREACHSPECS 3000 //bound number of reachspecs 
 #define MAXCOMMONRADIUS 70 //max radius to consider in building paths

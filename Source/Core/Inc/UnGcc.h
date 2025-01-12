@@ -18,6 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <malloc.h>
 
 #ifdef PLATFORM_WIN32
 #include <minwindef.h>
@@ -125,16 +126,16 @@ typedef int16_t  SWORD;  // 16-bit signed.
 typedef int64_t  SQWORD; // 64-bit signed.
 
 // Other base types.
-typedef int32_t  UBOOL;  // Boolean 0 (false) or 1 (true).
+typedef int      UBOOL;  // Boolean 0 (false) or 1 (true).
 typedef double   DOUBLE; // 64-bit IEEE double.
 
-#ifndef PLATFORM_WIN32 // On Windows these are defined in minwindef.h.
+#ifndef PLATFORM_WIN32   // On Windows these are defined in minwindef.h.
 // Unsigned base types.
 typedef uint8_t  BYTE;   // 8-bit  unsigned.
 typedef uint32_t DWORD;  // 32-bit unsigned.
 // Signed base types.
-typedef int32_t  INT;    // 32-bit signed.
-typedef int64_t __int64; // 64-bit signed.
+typedef int      INT;    // 32-bit signed.
+typedef int64_t  __int64;// 64-bit signed.
 // Other base types.
 typedef float    FLOAT;  // 32-bit IEEE floating point.
 #endif

@@ -27,16 +27,38 @@ typedef char* LPSTR;
 #else
 #define INVALID_SOCKET 1
 #define SOCKET_ERROR 1
-#define WSAEWOULDBLOCK EINPROGRESS // EWOULDBLOCK?
+#define WSAEWOULDBLOCK EAGAIN // EWOULDBLOCK?
 #define WSAENOTSOCK ENOTSOCK
 #define WSAEISCONN EISCONN
 #define WSATRY_AGAIN TRY_AGAIN
 #define WSAHOST_NOT_FOUND HOST_NOT_FOUND
-#define WSANO_DATA NO_ADDRESS
+#define WSANO_DATA NO_DATA
 #define closesocket close
 #define ioctlsocket ioctl
 #define WSAGetLastError() errno
 #define IPBYTE(A, N) ((BYTE*)&A.s_addr)[N-1]
+#endif
+
+#ifdef PLATFORM_DREAMCAST
+
+struct linger {
+	int l_onoff;
+	int l_linger;
+};
+
+#define ESOCKTNOSUPPORT 44
+#define ESHUTDOWN 58
+#define EUSERS 68
+#define EREMOTE 71
+#define FIONBIO O_NONBLOCK
+#undef ioctlsocket
+
+static inline int ioctlsocket( int fd, int opt, void* val )
+{
+	int flags = fcntl( fd, F_GETFL, 0 );
+	return fcntl( fd, F_SETFL, flags | opt );
+}
+
 #endif
 
 /*----------------------------------------------------------------------------

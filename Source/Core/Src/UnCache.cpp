@@ -111,7 +111,7 @@ void FMemCache::Init
 //
 // Shut down the memory cache.
 //
-void FMemCache::Exit( int FreeMemory )
+void FMemCache::Exit( INT FreeMemory )
 {
 	guard(FMemCache::Exit);
 	CheckState();

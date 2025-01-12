@@ -756,7 +756,11 @@ FSceneNode* URender::CreateChildFrame
 	World polygon rasterizer.
 -----------------------------------------------------------------------------*/
 
+#ifdef PLATFORM_DREAMCAST
+FRasterSpan HackRaster[480];//max y res 480!!
+#else
 FRasterSpan HackRaster[1200];//max y res 1200!!
+#endif
 INT RasterStartY, RasterEndY, RasterStartX, RasterEndX;
 static UBOOL SetupRaster( FTransform** Pts, INT NumPts, FSpanBuffer* Span, INT EndY )
 {

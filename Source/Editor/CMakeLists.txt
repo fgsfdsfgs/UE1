@@ -22,7 +22,10 @@ set(SRC_FILES
   "Src/Editor.cpp"
 )
 
-if(NOT TARGET_IS_WINDOWS OR NOT BUILD_WINDRV)
+if(LOW_MEMORY)
+  message(STATUS "Building very stripped down Editor.")
+  set(SRC_FILES "Src/UnEdTran.cpp" "Src/Editor.cpp")
+elseif(NOT TARGET_IS_WINDOWS OR NOT BUILD_WINDRV)
   message(STATUS "Building stripped down Editor.")
   list(APPEND SRC_FILES "Src/NullEdHook.cpp")
 else()

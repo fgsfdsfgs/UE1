@@ -2,6 +2,8 @@ project(Engine CXX)
 
 file(GLOB SRC_FILES "Src/*.cpp")
 
+list(FILTER SRC_FILES EXCLUDE REGEX "UnPath")
+
 add_library(${PROJECT_NAME} ${LIB_TYPE} ${SRC_FILES})
 
 target_include_directories(${PROJECT_NAME}

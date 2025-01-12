@@ -590,8 +590,9 @@ void UNOpenGLRenderDevice::EnsureComposeSize( const DWORD NewSize )
 	if( NewSize > ComposeSize )
 	{
 		Compose = (BYTE*)appRealloc( Compose, NewSize, "GLComposeBuf" );
+		verify( Compose );
+		ComposeSize = NewSize;
 	}
-	verify( Compose );
 }
 
 void UNOpenGLRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked, BYTE*& UploadBuf, GLenum& UploadFormat, GLenum& InternalFormat )

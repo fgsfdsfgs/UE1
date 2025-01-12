@@ -15,15 +15,26 @@ endif()
 # Options
 
 option(USE_SDL "Use NSDLDrv instead of WinDrv" ON)
+option(LOW_MEMORY "Conserve memory as much as possible" OFF)
 option(BUILD_EDITOR "Build Editor (GUI support requires Windows)" ON)
 option(BUILD_SOFTDRV "Build SoftDrv (x86/MSVC only)" OFF)
 option(BUILD_NOPENGLDRV "Build NOpenGLDrv" OFF)
 option(BUILD_NOPENGLESDRV "Build NOpenGLESDrv" ON)
+option(BUILD_GLDCDRV "Build GLDCDrv (Dreamcast only)" OFF)
 option(BUILD_NULLSOUNDDRV "Build SoundDrv (Null driver)" ON)
 option(BUILD_NOPENALDRV "Build NOpenALDrv" ON)
 option(BUILD_WINDRV "Build WinDrv" OFF)
 option(BUILD_FOR_PSVITA "Build binaries that can be loaded by so_loader on the Vita" OFF)
 option(BUILD_STATIC "Link everything into a single binary" OFF)
+
+if(PLATFORM_DREAMCAST)
+  set(BUILD_STATIC ON)
+  set(USE_SDL OFF)
+  set(LOW_MEMORY ON)
+  set(BUILD_NOPENALDRV OFF)
+  set(BUILD_NOPENGLESDRV OFF)
+  set(BUILD_GLDCDRV ON)
+endif()
 
 if(BUILD_STATIC)
   if(MSVC)
@@ -68,6 +79,10 @@ elseif((TARGET_ARCH MATCHES "86") OR (TARGET_ARCH STREQUAL "ia64"))
   endif()
 endif()
 
+if(PLATFORM_DREAMCAST)
+  set(TARGET_ARCH "sh4")
+endif()
+
 message(STATUS "Target arch: ${TARGET_ARCH}")
 message(STATUS "64-bit: ${TARGET_IS_64BIT}")
 
@@ -86,11 +101,16 @@ endif()
 
 set(TARGET_IS_WINDOWS FALSE)
 set(TARGET_IS_UNIX FALSE)
+set(TARGET_IS_DREAMCAST FALSE)
 if(WIN32)
   set(TARGET_IS_WINDOWS TRUE)
 else()
   # TODO
   set(TARGET_IS_UNIX TRUE)
+endif()
+
+if(PLATFORM_DREAMCAST)
+  set(TARGET_IS_DREAMCAST TRUE)
 endif()
 
 message(STATUS "Windows target: ${TARGET_IS_WINDOWS}")
@@ -119,6 +139,26 @@ elseif(TARGET_IS_ARM)
     add_link_options(-mtune=cortex-a9 -mfpu=neon -mfloat-abi=hard -mno-unaligned-access)
     add_link_options(-Wl,-q -Wl,-z,nocopyreloc -Wl,--hash-style=sysv)
   endif()
+elseif(TARGET_IS_DREAMCAST)
+  set(DREAMCAST_CFLAGS -fsigned-char -fno-short-enums -fexceptions -fstack-usage -fsingle-precision-constant -m4-single)
+  set(DREAMCAST_WFLAGS
+    -Wno-misleading-indentation -Wno-reorder -Wno-unused-variable -Wno-unused-value -Wno-overloaded-virtual -Wno-sign-compare
+    -Wno-address -Wno-nonnull-compare -Wno-unused-but-set-variable -Wno-mismatched-new-delete -Wno-int-in-bool-context -Wno-comment
+  )
+  add_compile_options(${DREAMCAST_CFLAGS} ${DREAMCAST_WFLAGS})
+  add_link_options(${DREAMCAST_CFLAGS})
+  add_definitions(-DPLATFORM_DREAMCAST)
+  include_directories(
+    ${KOS_BASE}/include
+    ${KOS_BASE}/kernel/arch/dreamcast/include
+    ${KOS_BASE}/addons/include
+    ${KOS_BASE}/../kos-ports/include
+  )
+  link_directories(
+    ${KOS_BASE}/lib/dreamcast
+    ${KOS_BASE}/addons/lib/dreamcast
+    ${KOS_BASE}/../kos-ports/lib
+  )
 endif()
 
 if(TARGET_IS_BIG_ENDIAN)
@@ -136,7 +176,7 @@ else()
   add_definitions(-DPLATFORM_POSIX)
   if(BUILD_FOR_PSVITA)
     add_definitions(-DPLATFORM_PSVITA)
-  else()
+  elseif(NOT TARGET_IS_DREAMCAST)
     add_definitions(-DPLATFORM_CASE_SENSITIVE_FS)
   endif()
   set(CMAKE_EXECUTABLE_SUFFIX ".bin")
@@ -144,6 +184,14 @@ endif()
 
 if(USE_SDL)
   add_definitions(-DPLATFORM_SDL)
+endif()
+
+if(USE_FILE_POOL)
+  add_definitions(-DUSE_FILE_POOL)
+endif()
+
+if(LOW_MEMORY)
+  add_definitions(-DPLATFORM_LOW_MEMORY)
 endif()
 
 if(MSVC)
@@ -161,6 +209,8 @@ else()
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)
     add_compile_options(-O0)
+  elseif(LOW_MEMORY)
+    add_compile_options(-Os)
   else()
     add_compile_options(-O2)
   endif()
@@ -236,6 +286,10 @@ if(USE_SDL)
   # SDL2
   add_subdirectory(NSDLDrv)
   list(APPEND INSTALL_TARGETS NSDLDrv)
+elseif(TARGET_IS_DREAMCAST)
+  # native Dreamcast driver
+  add_subdirectory(KOSDrv)
+  list(APPEND INSTALL_TARGETS KOSDrv)
 else()
   # archaic WinAPI shit
   set(BUILD_WINDRV ON)
@@ -258,6 +312,11 @@ endif()
 if(BUILD_NOPENGLDRV)
   add_subdirectory(NOpenGLDrv)
   list(APPEND INSTALL_TARGETS NOpenGLDrv)
+endif()
+
+if(BUILD_GLDCDRV)
+  add_subdirectory(GLDCDrv)
+  list(APPEND INSTALL_TARGETS GLDCDrv)
 endif()
 
 if(BUILD_NOPENGLESDRV)

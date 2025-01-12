@@ -622,6 +622,7 @@ static void RecursiveTagNames( UClass* Class )
 
 void UClass::Export( FOutputDevice& Out, const char* FileType, int Indent )
 {
+#ifndef PLATFORM_LOW_MEMORY
 	guard(UClass::Export);
 	static int RecursionDepth=0, DidTop, i;
 	if( appStricmp(FileType,"H")==0 )
@@ -875,6 +876,7 @@ void UClass::Export( FOutputDevice& Out, const char* FileType, int Indent )
 		Out.Log( "}\r\n" );
 	}
 	unguardobj;
+#endif
 }
 void UClass::Destroy()
 {

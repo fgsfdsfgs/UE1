@@ -18,6 +18,7 @@ void USound::Serialize( FArchive& Ar )
 	guard(USound::Serialize);
 	Super::Serialize( Ar );
 	Ar << FileType;
+#ifndef PLATFORM_LOW_MEMORY
 	if( Ar.IsLoading() || Ar.IsSaving() )
 	{
 		Ar << Data;
@@ -77,7 +78,14 @@ void USound::Serialize( FArchive& Ar )
 				Audio->RegisterSound( this );
 		}
 	}
-	else Ar.CountBytes( OriginalSize );
+	else
+#endif
+	{
+		Ar.CountBytes( OriginalSize );
+	}
+#ifdef PLATFORM_LOW_MEMORY
+	OriginalSize = 0;
+#endif
 	unguard;
 }
 void USound::Destroy()
@@ -103,6 +111,8 @@ void USound::PostLoad()
 };
 UAudioSubsystem* USound::Audio;
 IMPLEMENT_CLASS(USound);
+
+#ifndef PLATFORM_LOW_MEMORY
 
 /*-----------------------------------------------------------------------------
 	WaveModInfo implementation - downsampling of wave files.
@@ -460,6 +470,8 @@ void FWaveModInfo::NoiseGateFilter()
 	unguard;
 }
 
+#endif
+
 /*-----------------------------------------------------------------------------
 	UMusic implementation.
 -----------------------------------------------------------------------------*/
@@ -469,13 +481,23 @@ void UMusic::Serialize( FArchive& Ar )
 	guard(UMusic::Serialize);
 	Super::Serialize( Ar );
 	Ar << FileType;
+#ifndef PLATFORM_LOW_MEMORY
 	if( Ar.IsLoading() || Ar.IsSaving() )
 	{
 		Ar << Data;
 		if( Ar.IsLoading() )
+		{
 			OriginalSize = Data.Num();
+		}
 	}
-	else Ar.CountBytes( OriginalSize );
+	else
+#endif
+	{
+		Ar.CountBytes( OriginalSize );
+	}
+#ifdef PLATFORM_LOW_MEMORY
+	OriginalSize = 0;
+#endif
 	unguard;
 }
 void UMusic::Destroy()

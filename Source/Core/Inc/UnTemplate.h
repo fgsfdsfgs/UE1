@@ -228,7 +228,7 @@ public:
 		return OriginalNum - ArrayNum;
 		unguardSlow;
 	}
-	void Remove( int Index, int Count=1 );
+	void Remove( INT Index, INT Count=1 );
 	template< class U >
 	friend	inline FArchive& operator<<(FArchive& Ar, TArray<U>& A);
 	void SetNum( INT NewSize )

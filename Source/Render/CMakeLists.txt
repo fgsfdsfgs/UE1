@@ -14,6 +14,11 @@ set(SRC_FILES
 
 add_library(${PROJECT_NAME} ${LIB_TYPE} ${SRC_FILES})
 
+if(TARGET_IS_DREAMCAST AND NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
+  # FIXME: the rest is built with -Os, but building this file with -Os causes lightmaps to break
+  set_source_files_properties("Src/UnLight.cpp" PROPERTIES COMPILE_FLAGS -O2)
+endif()
+
 target_include_directories(${PROJECT_NAME}
   PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/Inc

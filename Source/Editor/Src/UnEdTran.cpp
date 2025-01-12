@@ -386,12 +386,14 @@ void UTransBuffer::EndChanges( FTransaction* Trans )
 		{
 			if( It->IsA(UModel::StaticClass) )
 			{
+#ifndef PLATFORM_LOW_MEMORY
 				UModel* Model = (UModel*)*It;
 				if
 				(	Model->Nodes
 				&&	Model->Surfs
 				&&	((Model->Nodes->GetFlags() & RF_TransData) || (Model->Surfs->GetFlags() & RF_TransData)) )
 					GEditor->bspBuildBounds(Model);
+#endif
 			}
 			else if( It->IsA(UBspNodes::StaticClass) )
 			{

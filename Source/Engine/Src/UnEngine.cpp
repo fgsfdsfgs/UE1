@@ -66,7 +66,12 @@ void UEngine::Init()
 
 	// Subsystems.
 	FURL::Init();
+
+#ifdef PLATFORM_LOW_MEMORY
+	GCache.Init( 1024 * 256, 2048 );
+#else
 	GCache.Init( 1024 * 1024 * Clamp(CacheSizeMegs,1,1024), 4096 );
+#endif
 
 	// Objects.
 	Cylinder = new UPrimitive;

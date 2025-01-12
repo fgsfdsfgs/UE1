@@ -20,6 +20,7 @@ FGlobalMath::FGlobalMath()
 	ViewCoords			(FVector(0,0,0),FVector(0,1,0),FVector(0,0,-1),FVector(1,0,0)),
 	UnitScale			(FVector(1,1,1),0.0,SHEER_ZX)
 {
+#ifndef PLATFORM_LOW_MEMORY
 	// Init base angle table.
 	int i;
 	for( i=0; i<NUM_ANGLES; i++ )
@@ -32,6 +33,7 @@ FGlobalMath::FGlobalMath()
 		FLOAT Temp			= (1.0-S);// Was (2*S*S*S-3*S*S+1);
 		SqrtFLOAT[i]		= appSqrt((FLOAT)i / 16384.0);
 	}
+#endif
 }
 
 /*-----------------------------------------------------------------------------

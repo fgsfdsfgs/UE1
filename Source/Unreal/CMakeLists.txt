@@ -1,8 +1,8 @@
 project(Unreal)
 
-if(USE_SDL)
+if(USE_SDL OR TARGET_IS_DREAMCAST)
   set(SRC_FILES "Src/SDLLaunch.cpp")
-else()
+elseif(TARGET_IS_WINDOWS)
   set(SRC_FILES "Src/WinLaunch.cpp")
 endif()
 
@@ -20,13 +20,17 @@ target_include_directories(${PROJECT_NAME}
   ${CMAKE_CURRENT_SOURCE_DIR}/Src
 )
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE UNREAL_EXPORTS UPACKAGE_NAME=${PROJECT_NAME})
+
 if(USE_SDL)
   target_link_libraries(${PROJECT_NAME} ${SDL2_LIBRARY} NSDLDrv)
   target_include_directories(${PROJECT_NAME} PRIVATE ${SDL2_INCLUDE_DIR})
 elseif(TARGET_IS_WINDOWS)
   target_link_libraries(${PROJECT_NAME} Window)
+elseif(TARGET_IS_DREAMCAST)
+  # ???
 else()
-  message(FATAL_ERROR "Non-Windows platforms can only use NSDLDrv.")
+  message(FATAL_ERROR "Platforms other than Windows and Dreamcast can only use NSDLDrv.")
 endif()
 
 if(TARGET_IS_ARM AND BUILD_FOR_PSVITA)

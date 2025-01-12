@@ -318,6 +318,7 @@ extern FGlobalRandomsBase *GRandoms;
 #define APPROX_MAN_BITS 10		/* Number of bits of approximate square root mantissa, <=23 */
 #define APPROX_EXP_BITS 9		/* Number of bits in IEEE exponent */
 
+#if ASM
 extern FLOAT SqrtManTbl[2<<APPROX_MAN_BITS];
 extern FLOAT DivSqrtManTbl[1<<APPROX_MAN_BITS],DivManTbl[1<<APPROX_MAN_BITS];
 extern FLOAT DivSqrtExpTbl[1<<APPROX_EXP_BITS],DivExpTbl[1<<APPROX_EXP_BITS];
@@ -325,7 +326,6 @@ extern FLOAT DivSqrtExpTbl[1<<APPROX_EXP_BITS],DivExpTbl[1<<APPROX_EXP_BITS];
 //
 // Macro to look up from a power table.
 //
-#if ASM
 #define POWER_ASM(ManTbl,ExpTbl)\
 	__asm\
 	{\
@@ -367,6 +367,14 @@ inline FLOAT SqrtApprox   (FLOAT F)
 	}
 	return F;								// compiles to fld [F].
 }
+#elif defined(PLATFORM_DREAMCAST)
+inline FLOAT DivSqrtApprox(FLOAT F) {return frsqrt(F);}
+inline FLOAT DivApprox    (FLOAT F) {return 1.0f / F;}
+inline FLOAT SqrtApprox   (FLOAT F) {return fsqrt(F);}
+#elif defined(PLATFORM_LOW_MEMORY)
+inline FLOAT DivSqrtApprox(FLOAT F) {return 1.f / sqrtf(F);}
+inline FLOAT DivApprox    (FLOAT F) {return 1.f / F;}
+inline FLOAT SqrtApprox   (FLOAT F) {return sqrtf(F);}
 #else
 inline FLOAT DivSqrtApprox(FLOAT F) {return 1.0/appSqrt(F);}
 inline FLOAT DivApprox    (FLOAT F) {return 1.0/F;}

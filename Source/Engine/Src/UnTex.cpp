@@ -101,6 +101,7 @@ void UTexture::GetInfo( FTextureInfo& TextureInfo, DOUBLE CurrentTime )
 		Mips(i).DataPtr     = &Mips(i).DataArray(0);
 		TextureInfo.Mips[i] = &Mips(i);
 	}
+	TextureInfo.Texture = this;
 
 	// Reset the texture flags.
 	TextureFlags &= ~TF_RealtimeChanged;
@@ -288,7 +289,11 @@ void UTexture::Serialize( FArchive& Ar )
 	&&	!GIsEditor
 	&&	Client 
 	&&	Client->LowDetailTextures
-	&&	Mips.Num()>1 )
+	&&	Mips.Num()>1
+#ifdef PLATFORM_DREAMCAST
+	&&	( USize > 8 || VSize > 8 )
+#endif
+	)
 	{
 		Mips.Remove( 0 );
 		Scale *= 2;
@@ -297,10 +302,27 @@ void UTexture::Serialize( FArchive& Ar )
 		UBits = FLogTwo(USize);
 		VBits = FLogTwo(VSize);
 	}
+#ifdef PLATFORM_LOW_MEMORY
+	if( Ar.IsLoading() && !GIsEditor && Mips.Num() > 1 )
+		Mips.Remove( 1, Mips.Num() - 1 );
+	if( BumpMap )
+	{
+		if( BumpMap->Mips.Num() )
+			BumpMap->Mips.Empty();
+		BumpMap = nullptr;
+	}
+	if( DetailTexture )
+	{
+		if( DetailTexture->Mips.Num() )
+			DetailTexture->Mips.Empty();
+		DetailTexture = nullptr;
+	}
+#endif
 	unguard;
 }
 void UTexture::Export( FOutputDevice& Out, const char* FileType, int Indent )
 {
+#ifndef PLATFORM_LOW_MEMORY
 	guard(UTexture::Export);
 
 	// Set all PCX file header properties.
@@ -356,6 +378,7 @@ void UTexture::Export( FOutputDevice& Out, const char* FileType, int Indent )
 		Out.WriteBinary( &Colors[i].B, 1 );
 	}
 	unguardobj;
+#endif
 }
 void UTexture::PostLoad()
 {
@@ -419,6 +442,7 @@ void UTexture::Init( INT InUSize, INT InVSize )
 
 void UTexture::CreateMips( UBOOL FullMips, UBOOL Downsample )
 {
+#ifndef PLATFORM_LOW_MEMORY
 	guard(UTexture::CreateMips);
 
 	check(Palette!=NULL);
@@ -557,6 +581,7 @@ void UTexture::CreateMips( UBOOL FullMips, UBOOL Downsample )
 		if (TrueDest) delete TrueDest;
 	}
 	unguardobj;
+#endif
 }
 
 

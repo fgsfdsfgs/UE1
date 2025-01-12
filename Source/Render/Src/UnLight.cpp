@@ -107,11 +107,13 @@ Revision history:
 	Approximate math implementation.
 ------------------------------------------------------------------------------------*/
 
+#if ASM
 FLOAT SqrtManTbl[2<<APPROX_MAN_BITS];
 FLOAT DivSqrtManTbl[1<<APPROX_MAN_BITS],DivManTbl[1<<APPROX_MAN_BITS];
 FLOAT DivSqrtExpTbl[1<<APPROX_EXP_BITS],DivExpTbl[1<<APPROX_EXP_BITS];
 
 static INT SavedESP,SavedEBP; 
+#endif
 
 /*------------------------------------------------------------------------------------
 	Subsystem definition
@@ -315,6 +317,7 @@ const FLightManager::FLocalEffectEntry FLightManager::Effects[LE_MAX] =
 	Init & Exit.
 ------------------------------------------------------------------------------------*/
 
+#if ASM
 //
 // Set up the tables required for fast square root computation.
 //
@@ -343,6 +346,7 @@ static void SetupTable( FLOAT* ManTbl, FLOAT* ExpTbl, FLOAT Power )
 		//debugf("man [%f] %i = %f",i,Power,ManTbl[i]);
 	}
 }
+#endif
 
 //
 // Initialize the global lighting subsystem.
@@ -370,6 +374,7 @@ void FLightManager::Init()
 		{ 0, 0, 0, 0,0,0,0,0}
 	};
 
+#if ASM
 	// Setup square root tables.
 	for( DWORD D=0; D< (1<< APPROX_MAN_BITS ); D++ )
 	{
@@ -383,8 +388,8 @@ void FLightManager::Init()
 	}
 	SetupTable(DivSqrtManTbl,DivSqrtExpTbl,-0.5);
 	SetupTable(DivManTbl,    DivExpTbl,    -1.0);
+#endif
 
-	
 	// Init square roots.
 	for( i=0; i<ARRAY_COUNT(LightSqrt); i++ )
 	{

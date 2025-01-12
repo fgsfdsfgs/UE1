@@ -20,7 +20,7 @@ public:
 
 UBOOL UNullAudioSubsystem::Init()
 {
-	return false;
+	return true;
 }
 
 void UNullAudioSubsystem::SetViewport(UViewport * Viewport)
@@ -40,7 +40,7 @@ void UNullAudioSubsystem::RegisterMusic(UMusic * Music)
 {
 }
 
-void UNullAudioSubsystem::RegisterSound(USound * Music)
+void UNullAudioSubsystem::RegisterSound(USound * Sound)
 {
 }
 
