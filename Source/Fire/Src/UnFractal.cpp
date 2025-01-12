@@ -50,7 +50,7 @@
 #define ICEASM          ASM
 
 // Copying palettes - warning: if activated, created non-unique palette names.
-#define COPYPALETTE 1 
+#define COPYPALETTE 0 
 
 /*----------------------------------------------------------------------------
 	Globals.

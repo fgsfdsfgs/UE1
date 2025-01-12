@@ -109,8 +109,13 @@ class DLL_EXPORT UFractalTexture : public UTexture
 ----------------------------------------------------------------------------*/
 
 // Fire constants.
+#ifdef PLATFORM_LOW_MEMORY
+#define MAXSPARKSINIT     128  /* _Initial_ maximum sparks per fire texture. */
+#define MAXSPARKSLIMIT    1024 /* Total allowed ceiling...*/
+#else
 #define MAXSPARKSINIT     1024 /* _Initial_ maximum sparks per fire texture. */
 #define MAXSPARKSLIMIT    8192 /* Total allowed ceiling...*/
+#endif
 #define MINSPARKSLIMIT    4    /* Minimum required number */
 
 // Spark types.
