@@ -43,22 +43,21 @@ DLL_EXPORT FExec* GThisExecHook = &GLocalHook;
 void FatalError( const char* Fmt, ... ) __attribute__((noreturn));
 void FatalError( const char* Fmt, ... )
 {
-	char Msg[4096];
+	char Msg[2048];
 
 	va_list Args;
 	va_start( Args, Fmt );
 	vsnprintf( Msg, sizeof( Msg ), Fmt, Args );
 	va_end( Args );
 
-	printf( "\n%s\n", Msg );
-
-	arch_stk_trace( 2 );
-
 	pvr_shutdown();
 	vid_init( DM_640x480, PM_RGB555 );
 	pvr_init_defaults();
+	dbgio_dev_select( "fb" );
 
-	bfont_draw_str( vram_s, 640, true, Msg );
+	printf( "%s\n\n", Msg );
+
+	arch_stk_trace( 2 );
 
 	while (true)
 		thd_sleep( 100 );
@@ -77,7 +76,7 @@ void HandleAssertFail( const char* File, int Line, const char* Expr, const char*
 //
 // Handle an error.
 //
-void HandleError()
+void HandleError( const char* Exception )
 {
 	GIsGuarded=0;
 	GIsCriticalError=1;
@@ -88,7 +87,10 @@ void HandleError()
 #ifdef PLATFORM_SDL
 	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, LocalizeError("Critical"), GErrorHist, SDL_GetKeyboardFocus() );
 #elif defined(PLATFORM_DREAMCAST)
-	FatalError( "FATAL ERROR:\n%s", GErrorHist );
+	if( Exception )
+		FatalError( "FATAL ERROR:\n%s\n\n%s", Exception, GErrorHist );
+	else
+		FatalError( "FATAL ERROR:\n%s", GErrorHist );
 #endif
 }
 
@@ -238,10 +240,15 @@ int main( int argc, const char** argv )
 		GIsGuarded=0;
 #ifndef _DEBUG
 	}
+	catch( const char* Error )
+	{
+		// Fatal error.
+		try { HandleError( Error ); } catch( ... ) { }
+	}
 	catch( ... )
 	{
 		// Crashed.
-		try {HandleError();} catch( ... ) {}
+		try { HandleError( nullptr ); } catch( ... ) { }
 	}
 #endif
 
