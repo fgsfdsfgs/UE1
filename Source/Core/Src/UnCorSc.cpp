@@ -295,7 +295,12 @@ void UObject::execBoolVariable( FFrame& Stack, BYTE*& Result )
 	// Get bool variable.
 	GBoolAddr = NULL;
 	BYTE B = *Stack.Code++;
+#ifdef PLATFORM_DREAMCAST
+	UBoolProperty* Property;
+	__builtin_memcpy( &Property, Stack.Code, sizeof( Property ) );
+#else
 	UBoolProperty* Property = *(UBoolProperty**)Stack.Code;
+#endif
 	(this->*GIntrinsics[B])( Stack, *(BYTE**)&GBoolAddr );
 	GProperty = Property;
 

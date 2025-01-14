@@ -231,7 +231,7 @@ BYTE CORE_API GRegisterIntrinsic( int iIntrinsic, void* Func );
 #define P_GET_STRUCT(typ,var)       typ var; {typ *Ptr=&var; Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_STRUCT_OPT(typ,var,def) typ var=def; {typ *Ptr=&var; Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_STRUCT_REF(typ,var)   typ a##var,*var=&a##var; {Stack.Step( Stack.Object, *(BYTE**)&var );}
-#define P_GET_SKIP_OFFSET(var)      _WORD var; {debug(*Stack.Code==EX_Skip); Stack.Code++; var=*(_WORD*)Stack.Code; Stack.Code+=2; }
+#define P_GET_SKIP_OFFSET(var)      _WORD var; {debug(*Stack.Code==EX_Skip); Stack.Code++; __builtin_memcpy( &var, Stack.Code, sizeof(var) ); Stack.Code+=2; }
 #define P_FINISH                    {Stack.Code++;}
 
 //
@@ -274,25 +274,45 @@ inline void FFrame::Step( UObject* Context, BYTE*& Result )
 }
 inline INT FFrame::ReadInt()
 {
+#ifdef PLATFORM_DREAMCAST
+	INT Result;
+	__builtin_memcpy( &Result, Code, sizeof( Result ) );
+#else
 	INT Result = *(INT*)Code;
+#endif
 	Code += sizeof(INT);
 	return Result;
 }
 inline FLOAT FFrame::ReadFloat()
 {
+#ifdef PLATFORM_DREAMCAST
+	FLOAT Result;
+	__builtin_memcpy( &Result, Code, sizeof( Result ) );
+#else
 	FLOAT Result = *(FLOAT*)Code;
+#endif
 	Code += sizeof(FLOAT);
 	return Result;
 }
 inline INT FFrame::ReadWord()
 {
+#ifdef PLATFORM_DREAMCAST
+	_WORD Result;
+	__builtin_memcpy( &Result, Code, sizeof( Result ) );
+#else
 	INT Result = *(_WORD*)Code;
+#endif
 	Code += sizeof(_WORD);
 	return Result;
 }
 inline FName FFrame::ReadName()
 {
+#ifdef PLATFORM_DREAMCAST
+	FName Result;
+	__builtin_memcpy( &Result, Code, sizeof( Result ) );
+#else
 	FName Result = *(FName*)Code;
+#endif
 	Code += sizeof(FName);
 	return Result;
 }
