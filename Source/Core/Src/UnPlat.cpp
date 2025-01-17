@@ -14,6 +14,7 @@
 #include <io.h>
 #elif defined(PLATFORM_DREAMCAST)
 #include <kos.h>
+#include <dirent.h>
 #else
 #error "Unsupported platform."
 #endif
@@ -1603,10 +1604,15 @@ CORE_API const char* appBaseDir()
 #endif
 			"/cd/System/"
 		};
-		struct stat St;
-		for( INT i = 0; i < ARRAY_COUNT( Paths ) && !BaseDir[0]; ++i )
-			if( stat( Paths[i], &St ) == 0 )
+		for( INT i = 0; i < ARRAY_COUNT( Paths ); ++i )
+		{
+			if( DIR* Dirp = opendir( Paths[i] ) )
+			{
 				strcpy( BaseDir, Paths[i] );
+				closedir( Dirp );
+				break;
+			}
+		}
 #endif
 		// Fallback to CWD.
 		if ( !BaseDir[0] )
