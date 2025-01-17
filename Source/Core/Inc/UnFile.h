@@ -4,6 +4,8 @@
 =============================================================================*/
 
 #include <stdarg.h>
+#include <string.h>
+
 /*-----------------------------------------------------------------------------
 	Global variables.
 -----------------------------------------------------------------------------*/
@@ -102,7 +104,7 @@ CORE_API void ClipboardPaste( class FString& Str );
 // Meant to be enabled in release builds.
 //
 #if defined(_DEBUG) || !DO_GUARD
-	#define guard(func)			{static const char __FUNC_NAME__[]=#func;
+	#define guard(func)			{
 	#define unguard				}
 	#define unguardf(msg)		}
 #else
@@ -296,9 +298,16 @@ CORE_API INT appStrncmp( const char* String1, const char* String2, INT Num );
 
 CORE_API void* appLargeMemset( void* Dest, int C, INT Count );
 CORE_API void* appLargeMemcpy( void* Dest, const void* Src, INT Count );
+
+#ifdef PLATFORM_DREAMCAST
+#define appMemmove memmove
+#define appMemset memset
+#define appMemcpy memcpy
+#else
 CORE_API void* appMemmove( void* Dest, const void* Src, INT Count );
 CORE_API void  appMemset( void* Dest, int C, INT Count );
 CORE_API void* appMemcpy( void* Dest, const void* Src, INT Count );
+#endif
 
 CORE_API INT   appMemcmp( const void* Buf1, const void* Buf2, INT Count );
 CORE_API const char* appSpc( int Num );

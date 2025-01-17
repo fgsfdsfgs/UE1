@@ -881,13 +881,11 @@ CORE_API char* appStrupr( char* String )
 #endif
 }
 
-
 //
 // Non-inline memory copy/fill functions for larger tasks.
 // -> appDeviceMemSet never does any cache warming (eg. for copying
 // to video memory )
 //
-
 
 CORE_API void* appLargeMemset( void* Dest, int C, INT Count )
 {
@@ -895,11 +893,12 @@ CORE_API void* appLargeMemset( void* Dest, int C, INT Count )
 	return memset( Dest, C, Count );
 }
 
-
 CORE_API void* appLargeMemcpy( void* Dest, const void* Src, INT Count )
 {
 	return memcpy( Dest, Src, Count );
 }
+
+#ifndef PLATFORM_DREAMCAST
 
 CORE_API void* appMemmove( void* Dest, const void* Src, INT Count )
 {
@@ -916,8 +915,7 @@ CORE_API void* appMemcpy( void* Dest, const void* Src, INT Count )
 	return memcpy( Dest, Src, Count );
 }
 
-
-
+#endif
 
 /*-----------------------------------------------------------------------------
 	CRC functions.
