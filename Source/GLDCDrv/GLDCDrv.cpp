@@ -8,6 +8,8 @@
 
 #define MASKED_TEXTURE_TAG (1ULL << 60)
 
+extern DLL_IMPORT const char* GStartupDbgDev;
+
 /*-----------------------------------------------------------------------------
 	Global implementation.
 -----------------------------------------------------------------------------*/
@@ -34,6 +36,15 @@ UGLDCRenderDevice::UGLDCRenderDevice()
 UBOOL UGLDCRenderDevice::Init( UViewport* InViewport )
 {
 	guard(UGLDCRenderDevice::Init)
+
+	// if we were using fb dbgio, disable it before initializing GL
+	const char* DbgDev = dbgio_dev_get();
+	if( DbgDev && !appStrcmp( DbgDev, "fb" ) )
+	{
+		// try to drop back to whatever we had at startup first
+		if( !GStartupDbgDev || dbgio_dev_select( GStartupDbgDev ) < 0 )
+			dbgio_dev_select( "null" );
+	}
 
 	GLdcConfig config;
 	glKosInitConfig(&config);

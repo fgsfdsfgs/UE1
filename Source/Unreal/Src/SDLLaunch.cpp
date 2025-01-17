@@ -13,6 +13,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <stdarg.h>
+#ifdef DREAMCAST_USE_FATFS
+extern "C" {
+#include <fatfs.h>
+}
+#endif
 KOS_INIT_FLAGS( INIT_IRQ | INIT_THD_PREEMPT | INIT_DEFAULT_ARCH );
 #endif
 
@@ -37,6 +42,9 @@ DLL_EXPORT FExec* GThisExecHook = &GLocalHook;
 
 #ifdef PLATFORM_DREAMCAST
 
+// What dbgio device was active at startup
+DLL_EXPORT const char* GStartupDbgDev = nullptr;
+
 //
 // Display error and lock up.
 //
@@ -50,10 +58,13 @@ void FatalError( const char* Fmt, ... )
 	vsnprintf( Msg, sizeof( Msg ), Fmt, Args );
 	va_end( Args );
 
-	pvr_shutdown();
-	vid_init( DM_640x480, PM_RGB555 );
-	pvr_init_defaults();
-	dbgio_dev_select( "fb" );
+	if( !dbgio_dev_get() || appStrcmp( dbgio_dev_get(), "fb" ) != 0 )
+	{
+		pvr_shutdown();
+		vid_init( DM_640x480, PM_RGB555 );
+		pvr_init_defaults();
+		dbgio_dev_select( "fb" );
+	}
 
 	printf( "%s\n\n", Msg );
 
@@ -69,6 +80,18 @@ void FatalError( const char* Fmt, ... )
 void HandleAssertFail( const char* File, int Line, const char* Expr, const char* Msg, const char* Func )
 {
 	FatalError( "ASSERTION FAILED:\nLoc: %s:%d (%s)\nExpr: %s\n%s", File, Line, Func, Expr, Msg);
+}
+
+void HandleIrqException( irq_t Code, irq_context_t* Context, void* Data )
+{
+	bfont_draw_str_vram_fmt( 8, 8, true, "UNHANDLED EXCEPTION 0x%08x", Code );
+	bfont_draw_str_vram_fmt( 8, 32, true, "PC: %p PR: %p", (void*)Context->pc, (void*)Context->pr );
+	bfont_draw_str_vram_fmt( 8, 56, true, "SR: %p R0: %p", (void*)Context->sr, (void*)Context->r[0] );
+
+	arch_stk_trace_at( Context->r[14], 0 );
+
+	volatile INT Dummy = 1;
+	while (Dummy);
 }
 
 #endif
@@ -205,7 +228,25 @@ int main( int argc, const char** argv )
 #endif
 
 #ifdef PLATFORM_DREAMCAST
+	// Redirect dbgio to the framebuffer if we're not already using dcload.
+	GStartupDbgDev = dbgio_dev_get();
+	if( !GStartupDbgDev || !appStrstr( GStartupDbgDev, "dcl" ) )
+		dbgio_dev_select( "fb" );
 	assert_set_handler( HandleAssertFail );
+	irq_set_handler( EXC_UNHANDLED_EXC, HandleIrqException, nullptr );
+#ifdef DREAMCAST_USE_FATFS
+	if( fs_fat_mount_sd() == 0 )
+	{
+		printf( "SD card found, will try to load data from there\n" );
+	}
+	else
+	{
+		// failed
+		printf( "SD card not found, will default to CD\n" );
+		sd_shutdown();
+		fs_fat_shutdown();
+	}
+#endif
 #endif
 
 	GIsStarted = 1;
@@ -219,6 +260,7 @@ int main( int argc, const char** argv )
 	GIsEditor = ParseParam(appCmdLine(),"EDITOR") || ParseParam(appCmdLine(),"MAKE");
 
 	// Init windowing.
+	printf( "base directory: %s\n", appBaseDir() );
 	appChdir( appBaseDir() );
 
 	// Init log.

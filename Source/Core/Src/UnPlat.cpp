@@ -1593,7 +1593,20 @@ CORE_API const char* appBaseDir()
 		appStrncpy( BaseDir, BasePath, sizeof(BaseDir) );
 		SDL_free( BasePath );
 #elif defined(PLATFORM_DREAMCAST)
-		strcpy( BaseDir, "/cd/System/" );
+		// try PC/SD/HDD first, then CD
+		static const char* Paths[] =
+		{
+			"/pc/Unreal/System/",
+#ifdef DREAMCAST_USE_FATFS
+			"/sd/Unreal/System/",
+			"/ide/Unreal/System/",
+#endif
+			"/cd/System/"
+		};
+		struct stat St;
+		for( INT i = 0; i < ARRAY_COUNT( Paths ) && !BaseDir[0]; ++i )
+			if( stat( Paths[i], &St ) == 0 )
+				strcpy( BaseDir, Paths[i] );
 #endif
 		// Fallback to CWD.
 		if ( !BaseDir[0] )

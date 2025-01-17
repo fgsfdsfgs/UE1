@@ -49,3 +49,7 @@ else()
 endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE UNREAL_EXPORTS UPACKAGE_NAME=${PROJECT_NAME})
+
+if(TARGET_IS_DREAMCAST AND DREAMCAST_USE_FATFS)
+  target_link_libraries(${PROJECT_NAME} fatfs)
+endif()

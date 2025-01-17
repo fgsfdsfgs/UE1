@@ -27,6 +27,8 @@ option(BUILD_WINDRV "Build WinDrv" OFF)
 option(BUILD_FOR_PSVITA "Build binaries that can be loaded by so_loader on the Vita" OFF)
 option(BUILD_STATIC "Link everything into a single binary" OFF)
 
+option(DREAMCAST_USE_FATFS "Try to load data from SD or IDE" OFF)
+
 if(PLATFORM_DREAMCAST)
   set(BUILD_STATIC ON)
   set(USE_SDL OFF)
@@ -148,6 +150,9 @@ elseif(TARGET_IS_DREAMCAST)
   add_compile_options(${DREAMCAST_CFLAGS} ${DREAMCAST_WFLAGS})
   add_link_options(${DREAMCAST_CFLAGS})
   add_definitions(-DPLATFORM_DREAMCAST)
+  if(DREAMCAST_USE_FATFS)
+    add_definitions(-DDREAMCAST_USE_FATFS)
+  endif()
   include_directories(
     ${KOS_BASE}/include
     ${KOS_BASE}/kernel/arch/dreamcast/include
