@@ -91,7 +91,10 @@ protected:
 	~FArray()
 	{
 		if( Data )
+		{
 			appFree( Data );
+			Data = nullptr;
+		}
 	}
 	void* Data;
 public:
@@ -504,6 +507,11 @@ public:
 		if (i < Pairs.Num())
 			return & Pairs(i).Value;
 		return 0;
+	}
+	void GetPair( INT i, TK& OutKey, TI& OutVal )
+	{
+		OutKey = Pairs(i).Key;
+		OutVal = Pairs(i).Value;
 	}
 private:
 	struct FPair

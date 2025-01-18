@@ -325,20 +325,40 @@ class ENGINE_API UTexture : public UBitmap
 //
 enum ETextureFormat
 {
-	TEXF_P8			= 0,
-	TEXF_RGB32		= 1,
-	TEXF_RGB64		= 2,
-	TEXF_MAX		= 3,
+	TEXF_P8       = 0, // 8bpp indexed
+	TEXF_BGRA8_LM = 1, // 32bpp BGRA8888 that is actually BGRA7777, used for lightmaps
+	TEXF_RGB565   = 2, // 16bpp RGB565
+	TEXF_MAX,          // end of platform-independent formats
+
+	TEXF_EXT_START         = 128, // beginning of extended formats
+	TEXF_EXT_ARGB1555      = 128, // 16bpp ARGB1555
+	TEXF_EXT_ARGB1555_TWID = 129, // [Dreamcast] pre-twiddled 16bpp ARGB1555
+	TEXF_EXT_ARGB1555_VQ   = 130, // [Dreamcast] VQ-compressed pre-twiddled ARGB1555
+	TEXF_EXT_RGB565_TWID   = 131, // [Dreamcast] pre-twiddled RGB565
+	TEXF_EXT_RGB565_VQ     = 132, // [Dreamcast] VQ-compressed pre-twiddled RGB565
+	
+	TEXF_EXT_MAX
 };
 
 //
 // Return the number of bytes per texel of a 
 // specified texture format.
 //
-inline int GColorBytes( ETextureFormat F )
+constexpr INT GColorBytes( const ETextureFormat F )
 {
-	static int ColorBytes[TEXF_MAX] = {1,4};
-	return ColorBytes[F];
+	switch( F )
+	{
+		case TEXF_BGRA8_LM:
+			return 4;
+		case TEXF_RGB565:
+		case TEXF_EXT_ARGB1555:
+		case TEXF_EXT_RGB565_VQ:
+		case TEXF_EXT_ARGB1555_VQ:
+			return 2;
+		case TEXF_P8:
+		default:
+			return 1;
+	}
 }
 
 //

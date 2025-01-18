@@ -231,7 +231,7 @@ BYTE CORE_API GRegisterIntrinsic( int iIntrinsic, void* Func );
 #define P_GET_STRUCT(typ,var)       typ var; {typ *Ptr=&var; Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_STRUCT_OPT(typ,var,def) typ var=def; {typ *Ptr=&var; Stack.Step( Stack.Object, *(BYTE**)&Ptr ); var=*Ptr;}
 #define P_GET_STRUCT_REF(typ,var)   typ a##var,*var=&a##var; {Stack.Step( Stack.Object, *(BYTE**)&var );}
-#define P_GET_SKIP_OFFSET(var)      _WORD var; {debug(*Stack.Code==EX_Skip); Stack.Code++; __builtin_memcpy( &var, Stack.Code, sizeof(var) ); Stack.Code+=2; }
+#define P_GET_SKIP_OFFSET(var)      _WORD var; {debug(*Stack.Code==EX_Skip); Stack.Code++; appMemcpy( &var, Stack.Code, sizeof(var) ); Stack.Code+=2; }
 #define P_FINISH                    {Stack.Code++;}
 
 //

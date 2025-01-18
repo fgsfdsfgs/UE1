@@ -1,0 +1,32 @@
+#pragma once
+
+#include "Engine.h"
+
+class FTextureConverter
+{
+public:
+	static constexpr INT MinTexSize = 8;
+	static constexpr INT MaxMipLevel = 0;
+	static constexpr UBOOL LowDetail = true;
+	static const char* Blacklist[];
+
+	static UBOOL AutoConvertTexture( UTexture* Tex );
+
+protected:
+	FTextureConverter( UTexture* InTexture, const ETextureFormat InFormat );
+	void Convert();
+
+protected:
+	void ExportMip( const FMipmap& Mip, const char* Filename );
+	void ConvertMip( FMipmap& Mip, const char* Filename );
+
+protected:
+	static constexpr const char* TempPngFile = "Temp.png";
+	static constexpr const char* TempPvrFile = "Temp.dt";
+	UTexture* Texture;
+	ETextureFormat DstFormat;
+	INT DstColorBytes;
+	INT SrcColorBytes;
+	INT USize;
+	INT VSize;
+};

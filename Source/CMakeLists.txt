@@ -16,6 +16,7 @@ endif()
 
 option(USE_SDL "Use NSDLDrv instead of WinDrv" ON)
 option(LOW_MEMORY "Conserve memory as much as possible" OFF)
+option(BUILD_UNREAL "Build the launcher" ON)
 option(BUILD_EDITOR "Build Editor (GUI support requires Windows)" ON)
 option(BUILD_SOFTDRV "Build SoftDrv (x86/MSVC only)" OFF)
 option(BUILD_NOPENGLDRV "Build NOpenGLDrv" OFF)
@@ -25,6 +26,7 @@ option(BUILD_NULLSOUNDDRV "Build SoundDrv (Null driver)" ON)
 option(BUILD_NOPENALDRV "Build NOpenALDrv" ON)
 option(BUILD_WINDRV "Build WinDrv" OFF)
 option(BUILD_FOR_PSVITA "Build binaries that can be loaded by so_loader on the Vita" OFF)
+option(BUILD_DCUTIL "Build DCUtil" OFF)
 option(BUILD_STATIC "Link everything into a single binary" OFF)
 
 option(DREAMCAST_USE_FATFS "Try to load data from SD or IDE" OFF)
@@ -209,7 +211,8 @@ else()
   message(STATUS "Building ${CMAKE_BUILD_TYPE} with GCC or Clang")
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_definitions(-D_DEBUG)
-    add_compile_options(-O0)
+    add_compile_options(-O0 -g)
+    add_link_options(-g)
   elseif(LOW_MEMORY)
     add_compile_options(-Os)
   else()
@@ -273,7 +276,7 @@ endif()
 
 # Subprojects
 
-set(INSTALL_TARGETS Core Engine Render IpDrv Fire Unreal)
+set(INSTALL_TARGETS Core Engine Render IpDrv Fire)
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
@@ -297,6 +300,12 @@ else()
   set(BUILD_SOFTDRV ON)
   set(BUILD_NOPENGLDRV OFF)
   set(BUILD_NOPENGLESDRV OFF)
+endif()
+
+if(BUILD_DCUTIL)
+  set(BUILD_EDITOR ON)
+  list(APPEND INSTALL_TARGETS DCUtil)
+  add_subdirectory(DCUtil)
 endif()
 
 if(BUILD_WINDRV)
@@ -341,7 +350,10 @@ if(BUILD_EDITOR)
   list(APPEND INSTALL_TARGETS Editor)
 endif()
 
-add_subdirectory(Unreal)
+if(BUILD_UNREAL)
+  add_subdirectory(Unreal)
+  list(APPEND INSTALL_TARGETS Unreal)
+endif()
 
 # assemble all modules and pdbs in one dir
 

@@ -1524,7 +1524,7 @@ void FLightManager::SetupForSurf
 	LightMap.TextureFlags	= 0;
 	LightMap.NumMips		= 1;
 	LightMap.Mips[0]		= &LightMip;
-	LightMap.Format			= TEXF_RGB32;
+	LightMap.Format			= TEXF_BGRA8_LM;
 	LightMap.Palette		= NULL;
 	LightMap.Mips[0]->DataPtr = NULL;
 
@@ -1532,7 +1532,7 @@ void FLightManager::SetupForSurf
 	FogMap.TextureFlags		= 0;
 	FogMap.NumMips			= 1;
 	FogMap.Mips[0]			= &FogMip;
-	FogMap.Format			= TEXF_RGB32;
+	FogMap.Format			= TEXF_BGRA8_LM;
 	FogMap.Palette			= NULL;
 	FogMap.Mips[0]->DataPtr = NULL;
 

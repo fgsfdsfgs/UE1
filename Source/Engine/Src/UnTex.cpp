@@ -85,7 +85,7 @@ void UTexture::GetInfo( FTextureInfo& TextureInfo, DOUBLE CurrentTime )
 	TextureInfo.TextureFlags	= TextureFlags;
 	TextureInfo.Pan				= FVector( 0, 0, 0 );
 	TextureInfo.MaxColor		= &MaxColor;
-	TextureInfo.Format			= TEXF_P8;
+	TextureInfo.Format			= (ETextureFormat)Format;
 	TextureInfo.UScale          = Scale;
 	TextureInfo.VScale          = Scale;
 	TextureInfo.CacheID			= MakeCacheID( CID_RenderTexture, this );
@@ -394,7 +394,7 @@ void UTexture::PostLoad()
 	UObject::PostLoad();
 
 	// Handle post editing.
-	if( !Palette )
+	if( !Palette && GIsEditor )
 	{
 		// Make sure the palette is valid.
 		Palette = new(GetParent())UPalette;

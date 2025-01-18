@@ -11,7 +11,6 @@
 #include <malloc.h>
 #include <assert.h>
 #include <string.h>
-#include <stdio.h>
 #include <stdarg.h>
 #ifdef DREAMCAST_USE_FATFS
 extern "C" {
@@ -20,6 +19,8 @@ extern "C" {
 #endif
 KOS_INIT_FLAGS( INIT_IRQ | INIT_THD_PREEMPT | INIT_DEFAULT_ARCH );
 #endif
+
+#include <stdio.h>
 
 #include "Engine.h"
 

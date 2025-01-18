@@ -617,7 +617,6 @@ void* UGLDCRenderDevice::VerticalUpscale( const INT USize, const INT VSize, cons
 				memcpy4( Dst, Src, SrcLine ); Dst += USize;
 				memcpy4( Dst, Src, SrcLine ); Dst += USize;
 				memcpy4( Dst, Src, SrcLine ); Dst += USize;
-				memcpy4( Dst, Src, SrcLine ); Dst += USize;
 				[[fallthrough]];
 			case 4:
 				memcpy4( Dst, Src, SrcLine ); Dst += USize;
@@ -752,6 +751,8 @@ void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTextur
 	for( INT MipIndex = 0; MipIndex < NumMips; ++MipIndex )
 	{
 		FMipmap* Mip = Info.Mips[MipIndex];
+		const INT USize = Max( MinTexSize, Mip->USize );
+		const INT VSize = Max( MinTexSize, Mip->VSize );
 		void* UploadBuffer = (void*)Compose;
 		GLenum UploadFormat;
 		GLenum InternalFormat;
@@ -759,7 +760,12 @@ void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTextur
 		if( !Mip || !Mip->DataPtr )
 			break;
 		// Convert texture if needed.
-		if( Info.Palette )
+		if( Info.Format == TEXF_EXT_ARGB1555_VQ )
+		{
+			glCompressedTexImage2D( GL_TEXTURE_2D, 0, GL_COMPRESSED_ARGB_1555_VQ_TWID_KOS, USize, VSize, 0, Mip->DataArray.Num(), Mip->DataPtr  );
+			continue;
+		}
+		else if( Info.Palette )
 		{
 			UploadFormat = GL_BGRA;
 			InternalFormat = GL_ARGB1555_KOS;
@@ -774,8 +780,7 @@ void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTextur
 			UploadBuffer = ConvertTextureMipBGRA7777( Mip );
 		}
 		// Upload to GL.
-		const INT USize = Max( MinTexSize, Mip->USize );
-		const INT VSize = Max( MinTexSize, Mip->VSize );
+
 		if( NewTexture )
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, InternalFormat, USize, VSize, 0, UploadFormat, ElementFormat, (void*)UploadBuffer );
 		else
