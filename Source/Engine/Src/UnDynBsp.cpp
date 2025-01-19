@@ -156,9 +156,15 @@ public:
 	///////////////////////////////////
 
 private:
+#ifdef PLATFORM_LOW_MEMORY
+	enum {MAX_MOVING_BRUSH_POLYS=2048};  // Maximum moving brush polys per level.
+	enum {MAX_MOVING_BRUSH_ACTORS=256};  // Maximum moving brush actors per level.
+	enum {MAX_TOUCHING_ACTORS=256};		 // Maximum actors touched by a moving brush during update.
+#else
 	enum {MAX_MOVING_BRUSH_POLYS=6000};  // Maximum moving brush polys per level.
 	enum {MAX_MOVING_BRUSH_ACTORS=512};  // Maximum moving brush actors per level.
 	enum {MAX_TOUCHING_ACTORS=512};		 // Maximum actors touched by a moving brush during update.
+#endif
 
 	ULevel*	Level;
 	FVector FPolyNormal;
@@ -307,11 +313,26 @@ FMovingBrushTracker::FMovingBrushTracker( ULevel* ThisLevel )
 	iTopVertPool		= ExpandDb(Level->Model->Verts);
 	iTopBrushMap		= 0;
 
-	// Note that all actors are unassimilated.
+	// Note that all actors are unassimilated and count all movers.
 	INT i;
+	INT NumMovers = 0;
+	INT NumMoverPolys = 0;
 	for( i=0; i<Level->Num(); i++ )
-		if( Level->Actors(i) )
-			Level->Actors(i)->bAssimilated = 0;
+	{
+		AActor* Actor = Level->Actors(i);
+		if( Actor )
+		{
+			Actor->bAssimilated = 0;
+			if( Actor->IsMovingBrush() )
+			{
+				++NumMovers;
+				if( Actor->Brush && Actor->Brush->Polys )
+					NumMoverPolys += Actor->Brush->Polys->Num();
+			}
+		}
+	}
+
+	debugf( NAME_Init, "%s has %d moving brushes with %d polys", Level->GetFullName(), NumMovers, NumMoverPolys );
 
 	BrushMapOwners		= (AActor **)MallocArray(MAX_MOVING_BRUSH_POLYS,AActor*,"BrushMapOwners");
 	for( i=0; i<MAX_MOVING_BRUSH_POLYS; i++ )
@@ -333,6 +354,28 @@ FMovingBrushTracker::FMovingBrushTracker( ULevel* ThisLevel )
 
 	// Now setup and update all brushes.
 	UpdateBrushes(NULL,0);
+
+	// Drop polys from all brushes that aren't attached to a mover.
+	for( TObjectIterator<UModel> It; It; ++It )
+	{
+		if( It->Polys && It->Polys->Num() )
+		{
+			UBOOL NotMoving = true;
+			for( INT i = 0; i < NumGroupActors; ++i )
+			{
+				if( GroupActors[i] && GroupActors[i]->Brush == *It )
+				{
+					NotMoving = false;
+					break;
+				}
+			}
+			if( NotMoving )
+			{
+				It->Polys->Empty();
+				It->Polys = nullptr;
+			}
+		}
+	}
 
 #if CHECK_ALL
 	// Make sure that multiple actors don't share the same brush.
