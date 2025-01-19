@@ -376,7 +376,12 @@ void FURL::AddOption( const char* Str )
 void FURL::GetConfigOptions( const char* Section, const char* Filename )
 {
 	guard(FURL::GetConfigOptions);
-	char Text[32767], *Ptr=Text;
+#ifdef PLATFORM_LOW_MEMORY
+	char Text[8192];
+#else
+	char Text[32767];
+#endif
+	char* Ptr=Text;
 	GetConfigSection( Section, Text, ARRAY_COUNT(Text) );
 	while( *Ptr )
 	{

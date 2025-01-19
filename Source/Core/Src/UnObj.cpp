@@ -814,7 +814,12 @@ void UObject::SaveConfig( DWORD Flags, const char* Filename )
 void FObjectManager::ResetConfig( UClass* Class, const char* SrcFilename, const char* DestFilename )
 {
 	guard(FObjectManager::ResetConfig);
-	char Buffer[32767], Src[256];
+#ifdef PLATFORM_LOW_MEMORY
+	char Buffer[8192];
+#else
+	char Buffer[32767];
+#endif
+	char Src[256];
 	appSprintf( Src, "%s%s", appBaseDir(), SrcFilename ? SrcFilename : "Default.ini" );
 	if( GetConfigSection( Class->GetPathName(), Buffer, ARRAY_COUNT(Buffer), Src ) )
 	{
@@ -2927,7 +2932,11 @@ static TArray<FRegistryObjectInfo> AllDrivers;
 void CacheDrivers( UBOOL ForceRefresh )
 {
 	guard(CacheDrivers);
+#ifdef PLATFORM_LOW_MEMORY
+	char Buffer[8192];
+#else
 	char Buffer[32767];
+#endif
 	if( ForceRefresh || appStricmp(CachedLanguage,GetLanguage())!=0 )
 	{
 		INT i;

@@ -115,7 +115,7 @@ void UGameEngine::Init()
 	DefaultURL.GetConfigOptions( "DefaultPlayer" );
 
 	// Enter initial world.
-	char AutoURL[4096]="";
+	char AutoURL[1024]="";
 	const char* Tmp = appCmdLine();
 	if
 	(	!ParseToken( Tmp, AutoURL, ARRAY_COUNT(AutoURL), 0 )
@@ -138,7 +138,6 @@ void UGameEngine::Init()
 	if( Client )
 	{
 		UViewport* Viewport = Client->NewViewport( GLevel, NAME_None );
-		char Error256[256];
 		if( !GLevel->SpawnPlayActor( Viewport, ROLE_SimulatedProxy, URL, "", Error256 ) )
 			appErrorf( Error256 );
 		Viewport->Input->Init( Viewport, GSystem );

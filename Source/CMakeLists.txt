@@ -30,7 +30,7 @@ option(BUILD_DCUTIL "Build DCUtil" OFF)
 option(BUILD_STATIC "Link everything into a single binary" OFF)
 
 option(DREAMCAST_USE_FATFS "Try to load data from SD or IDE" OFF)
-option(DREAMCAST_NO_WHOLE_ARCHIVE "Use a hack to link only actually used code instead of using -whole-archive." ON)
+option(DREAMCAST_NO_WHOLE_ARCHIVE "Use a hack to link only actually used code instead of using -whole-archive." OFF)
 
 if(PLATFORM_DREAMCAST)
   set(BUILD_STATIC ON)
@@ -147,14 +147,14 @@ elseif(TARGET_IS_ARM)
 elseif(TARGET_IS_DREAMCAST)
   set(DREAMCAST_CFLAGS
     -m4-single -fsigned-char -fno-short-enums -fexceptions -fno-rtti -fsingle-precision-constant -flto=8
-    -fomit-frame-pointer
+    -fomit-frame-pointer -fstack-usage
   )
   set(DREAMCAST_WFLAGS
     -Wno-misleading-indentation -Wno-reorder -Wno-unused-variable -Wno-unused-value -Wno-overloaded-virtual -Wno-sign-compare
     -Wno-address -Wno-nonnull-compare -Wno-unused-but-set-variable -Wno-mismatched-new-delete -Wno-int-in-bool-context -Wno-comment
   )
   add_compile_options(${DREAMCAST_CFLAGS} ${DREAMCAST_WFLAGS})
-  add_link_options(${DREAMCAST_CFLAGS})
+  add_link_options(${DREAMCAST_CFLAGS} ${DREAMCAST_WFLAGS})
   add_definitions(-DPLATFORM_DREAMCAST)
   if(DREAMCAST_USE_FATFS)
     add_definitions(-DDREAMCAST_USE_FATFS)
