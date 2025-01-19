@@ -22,7 +22,7 @@ struct FPackageExport
 };
 
 #define STATIC_EXPORT( sexp, ssym ) \
-	static GCC_USED FPackageExport GStaticExport##sexp( #ssym, (void*)&ssym );
+	extern "C" { GCC_USED FPackageExport GStaticExport##sexp( #ssym, (void*)&ssym ); }
 
 CORE_API void* appGetStaticExport( const char* Name );
 

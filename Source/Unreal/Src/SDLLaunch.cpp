@@ -127,10 +127,15 @@ UEngine* InitEngine()
 
 	// Platform init.
 	appInit();
-	GDynMem.Init( 65536 );
 
 	// Init subsystems.
+#ifdef PLATFORM_LOW_MEMORY
+	GDynMem.Init( 32768 );
 	GSceneMem.Init( 32768 );
+#else
+	GDynMem.Init( 65536 );
+	GSceneMem.Init( 32768 );
+#endif
 
 	// First-run menu.
 	UBOOL FirstRun=0;

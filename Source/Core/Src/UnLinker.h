@@ -429,7 +429,6 @@ class ULinkerLoad : public ULinker, public FArchiveFileLoad
 	// Variables.
 	DWORD LoadFlags;
 	INT FileSize;
-	CHAR Status[256];
 
 	// Constructor; all errors here throw exceptions which are fully recoverable.
 	ULinkerLoad( UObject* InParent, const char* InFilename, DWORD InLoadFlags )

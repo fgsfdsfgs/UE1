@@ -60,6 +60,12 @@
 #define MAX_COMPUTERNAME_LENGTH 256
 #endif
 
+#ifdef PLATFORM_LOW_MEMORY
+#define GMEM_CHUNK_SIZE 32768
+#else
+#define GMEM_CHUNK_SIZE 65536
+#endif
+
 CORE_API FGlobalPlatform GTempPlatform;
 INT GSlowTaskCount=0;
 FILE* GLogFile=NULL;
@@ -419,7 +425,7 @@ void appInit()
 
 	// Core initialization.
 	GObj.Init();
-	GMem.Init( 65536 );
+	GMem.Init( GMEM_CHUNK_SIZE );
 	GSys = new USystem;
 	GObj.AddToRoot( GSys );
 	for( INT i=0; i<ARRAY_COUNT(GSys->Suppress); i++ )
