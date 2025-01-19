@@ -8,6 +8,18 @@ extern DLL_IMPORT UBOOL GTickDue;
 extern "C" {HINSTANCE hInstance;}
 extern "C" {char GCC_HIDDEN THIS_PACKAGE[64]="DCUtil";}
 
+// FObjListItem.
+struct FObjListItem
+{
+	UObject* Obj;
+	INT Size;
+};
+
+static INT Compare( const FObjListItem& A, const FObjListItem& B )
+{
+	return A.Size - B.Size;
+}
+
 // FExecHook.
 class FExecHook : public FExec
 {
@@ -81,13 +93,58 @@ void FDCUtil::ExitEngine()
 	unguard;
 }
 
-void FDCUtil::ConvertTexturePkg( const char* PkgPath )
+void FDCUtil::LoadPackages( const char *Dir )
+{
+	guard(LoadPackages);
+
+	char Path[2048];
+	appStrcpy( Path, Dir );
+
+	if( char* Glob = appStrchr( Path, '*' ) )
+	{
+		char Temp[2048];
+		TArray<FString> Files = appFindFiles( Path );
+		*Glob = 0;
+		for( INT i = 0; i < Files.Num(); ++i )
+		{
+			snprintf( Temp, sizeof(Temp), "%s%s", Path, *Files(i) );
+			UPackage* Pkg = Cast<UPackage>( GObj.LoadPackage( nullptr, Temp, LOAD_KeepImports ) );
+			if( !Pkg )
+				appErrorf(  "Package '%s' does not exist", Pkg );
+			LoadedPackages.Add( Temp, Pkg );
+		}
+	}
+	else
+	{
+		UPackage* Pkg = Cast<UPackage>( GObj.LoadPackage( nullptr, Path, LOAD_KeepImports ) );
+		if( !Pkg )
+			appErrorf(  "Package '%s' does not exist", Pkg );
+		LoadedPackages.Add( Path, Pkg );
+	}
+
+	unguard;
+}
+
+void FDCUtil::ParsePackageArg( const char* Arg, const char* Glob )
+{
+	if( !appStrcmp( Arg, "*" ) )
+	{
+		// Go through ALL .u and specific packages
+		if( Glob )
+			LoadPackages( Glob );
+		LoadPackages( "../System/*.u" );
+	}
+	else
+	{
+		if( !appStrchr( Arg, '.' ) )
+			appErrorf( "Specify filename with extension." );
+		LoadPackages( Arg );
+	}
+}
+
+void FDCUtil::ConvertTexturePkg( const FString& PkgPath, UPackage* Pkg )
 {
 	guard(ConvertTexturePkg);
-
-	UPackage* Pkg = Cast<UPackage>( GObj.LoadPackage( nullptr, PkgPath, LOAD_KeepImports ) );
-	if( !Pkg )
-		appThrowf( "Package '%s' does not exist", PkgPath );
 
 	printf( "Converting textures in '%s'\n", Pkg->GetName() );
 
@@ -129,20 +186,56 @@ void FDCUtil::ConvertTexturePkg( const char* PkgPath )
 	unguard;
 }
 
-void FDCUtil::ConvertTexturesInPath( const char* Dir )
+void FDCUtil::ConvertSoundPkg( const FString& PkgPath, UPackage* Pkg )
 {
-	guard(ConvertTexturesInPath);
+	guard(ConvertSoundPkg);
 
-	char Temp[2048];
-	auto Files = appFindFiles( Dir );
-	for( INT i = 0; i < Files.Num(); ++i )
+	printf( "Nuking sounds in '%s'\n", Pkg->GetName() );
+
+	UBOOL Changed = false;
+	for( TObjectIterator<USound> It; It; ++It )
 	{
-		appStrcpy( Temp, Dir );
-		char* End = strrchr( Temp, '*' );
-		if( End ) *End = 0;
-		appStrcat( Temp, *Files(i) );
-		ConvertTexturePkg( Temp );
+		// just nuke for now
+		if( It->IsIn( Pkg ) && It->Data.Num() )
+		{
+			const DWORD Size = It->MemUsage();
+			printf( "- Nuking '%s' (%u bytes)\n", It->GetName(), Size );
+			TotalPrevSize += Size;
+			TotalNewSize += Size - It->Data.Num();
+			It->Data.Empty();
+			Changed = true;
+		}
 	}
+
+	if( Changed )
+		ChangedPackages.Add( PkgPath, Pkg );
+
+	unguard;
+}
+
+void FDCUtil::ConvertMusicPkg(const FString &PkgPath, UPackage *Pkg)
+{
+	guard(ConvertMusicPkg);
+
+	printf( "Nuking music in '%s'\n", Pkg->GetName() );
+
+	UBOOL Changed = false;
+	for( TObjectIterator<UMusic> It; It; ++It )
+	{
+		// just nuke for now
+		if( It->IsIn( Pkg ) && It->Data.Num() )
+		{
+			const DWORD Size = It->MemUsage();
+			printf( "- Nuking '%s' (%u bytes)\n", It->GetName(), Size );
+			TotalPrevSize += Size;
+			TotalNewSize += Size - It->Data.Num();
+			It->Data.Empty();
+			Changed = true;
+		}
+	}
+
+	if( Changed )
+		ChangedPackages.Add( PkgPath, Pkg );
 
 	unguard;
 }
@@ -180,6 +273,8 @@ void FDCUtil::CommitChanges()
 		}
 	}
 
+	LoadedPackages.Empty();
+
 	printf( "Total size change: %u -> %u\n", TotalPrevSize, TotalNewSize );
 }
 
@@ -194,21 +289,35 @@ void FDCUtil::Main( )
 
 	char Temp[2048] = { 0 };
 	const char* Cmd = appCmdLine();
+	FString PkgPath;
 	UPackage* Pkg = nullptr;
 	if( Parse( Cmd, "CVTUTX=", Temp, sizeof( Temp ) - 1 ) )
 	{
-		if( !appStrcmp( Temp, "*" ) )
+		ParsePackageArg( Temp, "../Textures/*.utx" );
+		for( INT i = 0; i < LoadedPackages.Size(); ++i )
 		{
-			// Go through ALL .u and .utx packages
-			ConvertTexturesInPath( "../Textures/*.utx" );
-			ConvertTexturesInPath( "../System/*.u" );
-			
+			LoadedPackages.GetPair( i, PkgPath, Pkg );
+			ConvertTexturePkg( PkgPath, Pkg );
 		}
-		else
+		CommitChanges();
+	}
+	else if( Parse( Cmd, "CVTUAX=", Temp, sizeof( Temp ) - 1 ) )
+	{
+		ParsePackageArg( Temp, "../Sounds/*.uax" );
+		for( INT i = 0; i < LoadedPackages.Size(); ++i )
 		{
-			if( !appStrchr( Temp, '.' ) )
-				appErrorf( "Specify filename with extension." );
-			ConvertTexturePkg( Temp );
+			LoadedPackages.GetPair( i, PkgPath, Pkg );
+			ConvertSoundPkg( PkgPath, Pkg );
+		}
+		CommitChanges();
+	}
+	else if( Parse( Cmd, "CVTUMX=", Temp, sizeof( Temp ) - 1 ) )
+	{
+		ParsePackageArg( Temp, "../Music/*.umx" );
+		for( INT i = 0; i < LoadedPackages.Size(); ++i )
+		{
+			LoadedPackages.GetPair( i, PkgPath, Pkg );
+			ConvertMusicPkg( PkgPath, Pkg );
 		}
 		CommitChanges();
 	}
@@ -218,13 +327,18 @@ void FDCUtil::Main( )
 		if( !Pkg )
 			appThrowf( "Package '%s' does not exist", Temp );
 
-		printf( "Objects in '%s':\n", Pkg->GetName() );
-
+		TArray<FObjListItem> Items;
 		for( TObjectIterator<UObject> It; It; ++It )
 		{
 			if( It->IsIn( Pkg ) )
-				printf(" - %s: %s (%d bytes)\n", It->GetPathName(), It->GetClassName(), It->MemUsage() );
+				Items.AddItem( { *It, It->MemUsage() } );
 		}
+
+		appSort( &Items(0), Items.Num() );
+
+		printf( "%d objects in '%s':\n", Items.Num(), Pkg->GetName() );
+		for( INT i = 0; i < Items.Num(); ++i )
+			printf( "- %s: %s (%d bytes)\n", Items(i).Obj->GetPathName(), Items(i).Obj->GetClassName(), Items(i).Size );
 	}
 	else
 	{

@@ -13,12 +13,16 @@ public:
 	void ExitEngine();
 
 private:
-	void ConvertTexturePkg( const char* PkgPath );
-	void ConvertTexturesInPath( const char* Dir );
+	void LoadPackages( const char* Dir );
+	void ParsePackageArg( const char* Arg, const char* Glob );
+	void ConvertTexturePkg( const FString& PkgPath, UPackage* Pkg );
+	void ConvertSoundPkg( const FString& PkgPath, UPackage* Pkg );
+	void ConvertMusicPkg( const FString& PkgPath, UPackage* Pkg );
 	void CommitChanges();
 
 private:
 	UEngine* Engine = nullptr;
+	TMap<FString, UPackage*> LoadedPackages;
 	TMap<FString, UPackage*> ChangedPackages;
 	TArray<UPalette*> UnrefPalettes;
 	DWORD TotalPrevSize = 0;

@@ -45,14 +45,14 @@ UBOOL FTextureConverter::AutoConvertTexture( UTexture* InTexture )
 		return false;
 
 	// Don't touch textures that are very small
-	if( GColorBytes( (ETextureFormat)InTexture->Format ) * InTexture->USize * InTexture->VSize < 2048 )
+	if( GColorBytes( (ETextureFormat)InTexture->Format ) * InTexture->USize * InTexture->VSize < 2300 )
 		return false;
 
 	ETextureFormat TargetFormat;
 	if( InTexture->Format == TEXF_P8 && InTexture->Palette )
 		TargetFormat = TEXF_EXT_ARGB1555_VQ;
 	else
-		return false; // TODO: figure out what to do with lightmaps (they are combined at runtime)
+		TargetFormat = (ETextureFormat)InTexture->Format; // TODO: figure out what to do with lightmaps (they are combined at runtime)
 
 	FTextureConverter TexCvt( InTexture, TargetFormat );
 	TexCvt.Convert();
@@ -77,17 +77,27 @@ FTextureConverter::FTextureConverter( UTexture* InTexture, const ETextureFormat 
 
 void FTextureConverter::Convert()
 {
-	// First, cut off the first mip level if needed
-	if( LowDetail && Texture->Mips.Num() > 1 )
+	// First, cut off the first N mip levels if needed
+	INT RealDropMips = Min( DropMips, Texture->Mips.Num() - 1 );
+	if( RealDropMips > 0 )
 	{
-		Texture->Mips.Remove( 0 );
-		Texture->Scale *= 2.f;
-		Texture->USize = Texture->Mips(0).USize;
-		Texture->VSize = Texture->Mips(0).VSize;
-		Texture->UBits = FLogTwo(Texture->USize);
-		Texture->VBits = FLogTwo(Texture->VSize);
-		USize = Max( MinTexSize, Texture->USize );
-		VSize = Max( MinTexSize, Texture->VSize );
+		INT DroppedSize = Max( USize >> DropMips, VSize >> DropMips );
+		while( DroppedSize > 1 && DroppedSize > MaxTexSize && RealDropMips < Texture->Mips.Num() - 1 )
+		{
+			RealDropMips++;
+			DroppedSize >>= 1;
+		}
+		if( Texture->Mips.Num() > RealDropMips )
+		{
+			Texture->Mips.Remove( 0, RealDropMips );
+			Texture->Scale *= (FLOAT)( 1 << RealDropMips );
+			Texture->USize = Texture->Mips(0).USize;
+			Texture->VSize = Texture->Mips(0).VSize;
+			Texture->UBits = FLogTwo(Texture->USize);
+			Texture->VBits = FLogTwo(Texture->VSize);
+			USize = Max( MinTexSize, Texture->USize );
+			VSize = Max( MinTexSize, Texture->VSize );
+		}
 	}
 
 	// Cut off extra mip levels
@@ -97,6 +107,10 @@ void FTextureConverter::Convert()
 	// Strip off bump and detail
 	Texture->BumpMap = nullptr;
 	Texture->DetailTexture = nullptr;
+
+	// If no conversion was requested, bail
+	if( DstFormat == Texture->Format )
+		return;
 
 	// Do not convert format if texture is blacklisted
 	for( INT i = 0; i < ARRAY_COUNT( Blacklist ); ++i )

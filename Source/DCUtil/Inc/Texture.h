@@ -6,8 +6,9 @@ class FTextureConverter
 {
 public:
 	static constexpr INT MinTexSize = 8;
+	static constexpr INT MaxTexSize = 128;
 	static constexpr INT MaxMipLevel = 0;
-	static constexpr UBOOL LowDetail = true;
+	static constexpr INT DropMips = 1;
 	static const char* Blacklist[];
 
 	static UBOOL AutoConvertTexture( UTexture* Tex );
