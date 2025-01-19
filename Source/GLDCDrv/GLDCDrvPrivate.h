@@ -23,15 +23,22 @@ class DLL_EXPORT UGLDCRenderDevice : public URenderDevice
 	UBOOL NoFiltering;
 
 	// All currently cached textures (Ptr -> GL ID).
-	TMap<QWORD, GLuint> BindMap;
+	struct FTexBind
+	{
+		GLuint Tex;
+		BYTE LastType;
+	};
+	TMap<QWORD, FTexBind> BindMap;
 
 	struct FTexInfo
 	{
 		QWORD CurrentCacheID;
+		FTexBind* CurrentBind;
 		FLOAT UMult;
 		FLOAT VMult;
 		FLOAT UPan;
 		FLOAT VPan;
+		UBOOL bIsTile;
 	} TexInfo;
 
 	// Texture upload buffer;
@@ -81,9 +88,9 @@ class DLL_EXPORT UGLDCRenderDevice : public URenderDevice
 	void SetBlend( DWORD PolyFlags, UBOOL InverseOrder = false );
 	void SetTexture( FTextureInfo& Info, DWORD PolyFlags, FLOAT PanBias );
 	void ResetTexture( );
-	void UploadTexture( FTextureInfo& Info, const UBOOL NewTexture, const UBOOL Masked );
+	void UploadTexture( FTextureInfo& Info, const UBOOL NewTexture );
 	void EnsureComposeSize( const DWORD NewSize );
-	void* ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked );
+	void* ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette );
 	void* ConvertTextureMipBGRA7777( const FMipmap* Mip );
 	void* VerticalUpscale( const INT USize, const INT VSize, const INT VTimes );
 	void PrintMemStats() const;

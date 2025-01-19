@@ -6,8 +6,6 @@
 
 #include "GLDCDrvPrivate.h"
 
-#define MASKED_TEXTURE_TAG (1ULL << 60)
-
 extern DLL_IMPORT const char* GStartupDbgDev;
 
 /*-----------------------------------------------------------------------------
@@ -48,9 +46,9 @@ UBOOL UGLDCRenderDevice::Init( UViewport* InViewport )
 
 	GLdcConfig config;
 	glKosInitConfig(&config);
-	config.initial_op_capacity = 512 * 3;
-	config.initial_tr_capacity = 512 * 3;
-	config.initial_pt_capacity = 256 * 3;
+	config.initial_op_capacity = 4096;
+	config.initial_tr_capacity = 4096;
+	config.initial_pt_capacity = 1536;
 	config.initial_immediate_capacity = 256;
 	glKosInitEx(&config);
 
@@ -122,7 +120,7 @@ void UGLDCRenderDevice::Flush()
 		debugf( NAME_Log, "Flushing %d textures", BindMap.Size() );
 		glFinish();
 		for( INT i = 0; i < BindMap.Size(); ++i )
-			glDeleteTextures( 1, &BindMap[i] );
+			glDeleteTextures( 1, &BindMap[i].Tex );
 		BindMap.Empty();
 	}
 
@@ -303,6 +301,10 @@ void UGLDCRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture, FLOA
 {
 	guard(UGLDCRenderDevice::DrawTile);
 
+	// HACK: Let texture allocator know that it shouldn't nuke the data from this texture
+	// so we don't lose UI textures on level reload
+	TexInfo.bIsTile = true;
+
 	SetSceneNode( Frame );
 	SetBlend( PolyFlags );
 	SetTexture( Texture, ( PolyFlags & PF_Masked ), 0.f );
@@ -322,6 +324,8 @@ void UGLDCRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture, FLOA
 		glTexCoord2f( (U   )*TexInfo.UMult, (V+VL)*TexInfo.VMult );
 		glVertex3f( RFX2*Z*(X   -Frame->FX2), RFY2*Z*(Y+YL-Frame->FY2), Z );
 	glEnd();
+
+	TexInfo.bIsTile = false;
 
 	unguard;
 }
@@ -524,6 +528,7 @@ void UGLDCRenderDevice::ResetTexture( )
 		glBindTexture( GL_TEXTURE_2D, 0 );
 		glDisable( GL_TEXTURE_2D );
 		TexInfo.CurrentCacheID = 0;
+		TexInfo.CurrentBind = nullptr;
 	}
 
 	unguard;
@@ -545,32 +550,37 @@ void UGLDCRenderDevice::SetTexture( FTextureInfo& Info, DWORD PolyFlags, FLOAT P
 	Tex.VMult = 1.f / (Info.VScale * static_cast<FLOAT>(Info.VSize));
 
 	// Find in cache.
-	const UBOOL RealtimeChanged = ( Info.TextureFlags & TF_RealtimeChanged );
-	QWORD NewCacheID = Info.CacheID;
-	if( PolyFlags & PF_Masked )
-		NewCacheID |= MASKED_TEXTURE_TAG;
-	if( NewCacheID == Tex.CurrentCacheID && !RealtimeChanged )
+	const QWORD NewCacheID = Info.CacheID;
+	const UBOOL RealtimeChanged = ( Info.TextureFlags & TF_RealtimeChanged ) != 0;
+	if( !RealtimeChanged && NewCacheID == Tex.CurrentCacheID )
 		return;
+
+	const QWORD LookupID = NewCacheID & ~0xFFULL;
+	const BYTE NewType = NewCacheID & 0xFF;
+	FTexBind* Bind = BindMap.Find( LookupID );
+	const UBOOL NewTexture = !Bind;
+	if( NewTexture )
+	{
+		// Create new texture.
+		Bind = BindMap.Add( LookupID, { 0, NewType } );
+		glGenTextures( 1, &Bind->Tex );
+	}
 
 	// Make current.
 	Tex.CurrentCacheID = NewCacheID;
-	GLuint* Bind = BindMap.Find( NewCacheID );
-	GLuint* OldBind = Bind;
-	if( !Bind )
+	if( Tex.CurrentBind != Bind )
 	{
-		// New texture.
-		Bind = BindMap.Add( NewCacheID, 0 );
-		glGenTextures( 1, Bind );
+		glEnable( GL_TEXTURE_2D );
+		glBindTexture( GL_TEXTURE_2D, Bind->Tex );
+		Tex.CurrentBind = Bind;
 	}
 
-	glEnable( GL_TEXTURE_2D );
-	glBindTexture( GL_TEXTURE_2D, *Bind );
-
-	if( !OldBind || RealtimeChanged )
+	if( NewTexture || RealtimeChanged || Bind->LastType != NewType )
 	{
 		// New texture or it has changed, upload it.
+		Bind->LastType = NewType;
 		Info.TextureFlags &= ~TF_RealtimeChanged;
-		UploadTexture( Info, !OldBind, ( PolyFlags & PF_Masked ) != 0 );
+		UploadTexture( Info, NewTexture );
 		// Set mip filtering if there are mips.
 		const INT NumMips = Min( MaxMipLevel + 1, Info.NumMips );
 		if( ( PolyFlags & PF_NoSmooth ) || ( NoFiltering && Info.Palette ) ) // TODO: This is set per poly, not per texture.
@@ -634,7 +644,7 @@ void* UGLDCRenderDevice::VerticalUpscale( const INT USize, const INT VSize, cons
 	return NewBase;
 }
 
-void* UGLDCRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked )
+void* UGLDCRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette )
 {
 	// 8-bit indexed. We have to fix the alpha component since it's mostly garbage.
 	DWORD i;
@@ -648,7 +658,7 @@ void* UGLDCRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor* 
 
 	// convert palette; if texture is masked, make first entry transparent
 	_WORD DstPal[NUM_PAL_COLORS];
-	DstPal[0] = Masked ? 0 : Palette[0].RGB888ToARGB1555();
+	DstPal[0] = Palette[0].RGB888ToARGB1555() & ~0x8000U;
 	for( i = 1; i < ARRAY_COUNT( DstPal ); ++i )
 		DstPal[i] = Palette[i].RGB888ToARGB1555();
 
@@ -736,7 +746,7 @@ void* UGLDCRenderDevice::ConvertTextureMipBGRA7777( const FMipmap* Mip )
 	return Compose;
 }
 
-void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTexture, const UBOOL Masked )
+void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTexture )
 {
 	guard(UGLDCRenderDevice::UploadTexture);
 
@@ -770,7 +780,7 @@ void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTextur
 			UploadFormat = GL_BGRA;
 			InternalFormat = GL_ARGB1555_KOS;
 			ElementFormat = GL_UNSIGNED_SHORT_1_5_5_5_REV;
-			UploadBuffer = ConvertTextureMipI8( Mip, Info.Palette, Masked );
+			UploadBuffer = ConvertTextureMipI8( Mip, Info.Palette );
 		}
 		else
 		{
@@ -780,11 +790,20 @@ void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTextur
 			UploadBuffer = ConvertTextureMipBGRA7777( Mip );
 		}
 		// Upload to GL.
-
 		if( NewTexture )
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, InternalFormat, USize, VSize, 0, UploadFormat, ElementFormat, (void*)UploadBuffer );
 		else
 			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, USize, VSize, UploadFormat, ElementFormat, (void*)UploadBuffer );
+	}
+
+	// If this wasn't a lightmap, UI texture or realtime texture, nuke it since we won't need SH4-side data for it anymore.
+	if( !TexInfo.bIsTile && Info.Format != TEXF_BGRA8_LM && !( Info.TextureFlags & (TF_Realtime|TF_RealtimePalette|TF_Parametric) ) )
+	{
+		for( INT i = 0; i < Info.NumMips; ++i )
+		{
+			Info.Mips[i]->DataArray.Empty();
+			Info.Mips[i]->DataPtr = nullptr;
+		}
 	}
 
 	unguard;
@@ -797,3 +816,4 @@ void UGLDCRenderDevice::PrintMemStats() const
 	debugf( "Free VRAM = %d", FreeVRAM );
 	malloc_stats();
 }
+ 
