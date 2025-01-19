@@ -163,19 +163,19 @@ void UKOSViewport::OpenWindow( void* InParentWindow, UBOOL Temporary, INT NewX, 
 		ColorBytes = 2;
 		if( NewX <= 320 )
 		{
-			vid_set_mode( DM_320x240, PM_RGB555 );
+			vid_set_mode( DM_320x240, PM_RGB565 );
 			NewX = 320;
 			NewY = 240;
 		}
 		else if( NewX <= 640 )
 		{
-			vid_set_mode( DM_640x480, PM_RGB555 );
+			vid_set_mode( DM_640x480, PM_RGB565 );
 			NewX = 640;
 			NewY = 480;
 		}
 		else
 		{
-			vid_set_mode( DM_768x480, PM_RGB555 );
+			vid_set_mode( DM_768x480, PM_RGB565 );
 			NewX = 768;
 			NewY = 480;
 		}
