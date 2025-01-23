@@ -24,6 +24,10 @@ if(BUILD_STATIC)
   list(APPEND SRC_FILES "Src/UnStaticExports.cpp")
 endif()
 
+if(TARGET_IS_DREAMCAST AND DREAMCAST_USE_FILE_POOL)
+  list(APPEND SRC_FILES "Src/UnFilePool.cpp")
+endif()
+
 if(NOT MSVC AND NOT (CMAKE_BUILD_TYPE STREQUAL "Debug"))
   # FIXME: the very funny reference juggling UE does with FFrame::Step() confuses gcc,
   # so we'll lower optimization level for the core UnrealScript interpreter for now

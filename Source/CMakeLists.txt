@@ -30,6 +30,7 @@ option(BUILD_DCUTIL "Build DCUtil" OFF)
 option(BUILD_STATIC "Link everything into a single binary" OFF)
 
 option(DREAMCAST_USE_FATFS "Try to load data from SD or IDE" OFF)
+option(DREAMCAST_USE_FILE_POOL "Use file handle pool (wrap stdio)" ON)
 option(DREAMCAST_NO_WHOLE_ARCHIVE "Use a hack to link only actually used code instead of using -whole-archive." OFF)
 
 if(PLATFORM_DREAMCAST)
@@ -158,6 +159,10 @@ elseif(TARGET_IS_DREAMCAST)
   add_definitions(-DPLATFORM_DREAMCAST)
   if(DREAMCAST_USE_FATFS)
     add_definitions(-DDREAMCAST_USE_FATFS)
+  endif()
+  if(DREAMCAST_USE_FILE_POOL)
+    add_definitions(-DDREAMCAST_USE_FILE_POOL)
+    add_link_options(-Wl,--wrap=fopen -Wl,--wrap=fclose -Wl,--wrap=fread -Wl,--wrap=fwrite -Wl,--wrap=fseek -Wl,--wrap=ftell -Wl,--wrap=setvbuf)
   endif()
   include_directories(
     ${KOS_BASE}/include
