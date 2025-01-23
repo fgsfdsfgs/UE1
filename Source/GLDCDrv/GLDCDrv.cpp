@@ -56,9 +56,8 @@ UBOOL UGLDCRenderDevice::Init( UViewport* InViewport )
 	SupportsDistanceFog = false; // true;
 	NoVolumetricBlend = true;
 
-	ComposeSize = 256 * 256 * 2;
-	Compose = (BYTE*)appMalloc( ComposeSize, "GLComposeBuf" );
-	verify( Compose );
+	ComposeSize = 0;
+	EnsureComposeSize( 256 * 256 * 2 );
 
 	// Set modelview matrix to flip stuff into our coordinate system.
 	const FLOAT Matrix[16] =
@@ -74,10 +73,10 @@ UBOOL UGLDCRenderDevice::Init( UViewport* InViewport )
 
 	// Set permanent state.
 	glEnable( GL_DEPTH_TEST );
-	glShadeModel( GL_SMOOTH );
 	glAlphaFunc( GL_GREATER, 0.5f );
 	glDisable( GL_ALPHA_TEST );
 	glDepthMask( GL_TRUE );
+	glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
 	glBlendFunc( GL_ONE, GL_ZERO );
 	glDisable( GL_BLEND );
 	glClearDepth( 1.0f );
@@ -177,6 +176,8 @@ void UGLDCRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo& Sur
 
 	check(Surface.Texture);
 
+	glShadeModel( GL_FLAT );
+
 	SetSceneNode( Frame );
 
 	// @HACK: Don't draw translucent and masked parts of the sky. Don't know how to do that yet.
@@ -260,6 +261,8 @@ void UGLDCRenderDevice::DrawGouraudPolygon( FSceneNode* Frame, FTextureInfo& Tex
 {
 		guard(UGLDCRenderDevice::DrawGouraudPolygon);
 
+		glShadeModel( GL_SMOOTH );
+
 		SetSceneNode( Frame );
 		SetBlend( PolyFlags );
 		SetTexture( Texture, ( PolyFlags & PF_Masked ), 0 );
@@ -300,6 +303,8 @@ void UGLDCRenderDevice::DrawGouraudPolygon( FSceneNode* Frame, FTextureInfo& Tex
 void UGLDCRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture, FLOAT X, FLOAT Y, FLOAT XL, FLOAT YL, FLOAT U, FLOAT V, FLOAT UL, FLOAT VL, FSpanBuffer* Span, FLOAT Z, FPlane Light, FPlane Fog, DWORD PolyFlags )
 {
 	guard(UGLDCRenderDevice::DrawTile);
+
+	glShadeModel( GL_FLAT );
 
 	// HACK: Let texture allocator know that it shouldn't nuke the data from this texture
 	// so we don't lose UI textures on level reload
@@ -346,6 +351,8 @@ void UGLDCRenderDevice::EndFlash( )
 
 	if( ColorMod == FPlane( 0.f, 0.f, 0.f, 0.f ) )
 		return;
+
+	glShadeModel( GL_FLAT );
 
 	ResetTexture();
 	SetBlend( PF_Highlighted );
@@ -602,7 +609,9 @@ void UGLDCRenderDevice::EnsureComposeSize( const DWORD NewSize )
 {
 	if( NewSize > ComposeSize )
 	{
-		Compose = (BYTE*)appRealloc( Compose, NewSize, "GLComposeBuf" );
+		if( Compose )
+			free( Compose );
+		Compose = (BYTE*)memalign( 32, NewSize );
 		verify( Compose );
 		debugf( "GL: Compose size increased %d -> %d", ComposeSize, NewSize );
 		ComposeSize = NewSize;
@@ -790,10 +799,10 @@ void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTextur
 			UploadBuffer = ConvertTextureMipBGRA7777( Mip );
 		}
 		// Upload to GL.
-		if( NewTexture )
+		// if( NewTexture )
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, InternalFormat, USize, VSize, 0, UploadFormat, ElementFormat, (void*)UploadBuffer );
-		else
-			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, USize, VSize, UploadFormat, ElementFormat, (void*)UploadBuffer );
+		// else
+		// 	glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, USize, VSize, UploadFormat, ElementFormat, (void*)UploadBuffer );
 	}
 
 	// If this wasn't a lightmap, UI texture or realtime texture, nuke it since we won't need SH4-side data for it anymore.
