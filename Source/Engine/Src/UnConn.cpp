@@ -108,6 +108,7 @@ UPendingLevel::UPendingLevel( UEngine* InEngine, const FURL& InURL )
 		// Send initial message.
 		NetDriver->ServerConnection->Logf( "HELLO REVISION=1", NET_REVISION );
 		NetDriver->ServerConnection->FlushNet();
+		debugf( NAME_DevNet, "Connecting to '%s'...", *InURL.Host );
 	}
 	else
 	{

@@ -101,14 +101,17 @@ void UGameEngine::Init()
 
 	// Load the entry level.
 	char Error256[256];
-#ifndef PLATFORM_LOW_MEMORY
 	if( Client )
 	{
 		if( !LoadMap( FURL("Entry"), NULL, Error256 ) )
 			appErrorf( LocalizeError("LoadEntry"), Error256 );
 		Exchange( GLevel, GEntry );
-	}
+#ifdef PLATFORM_LOW_MEMORY
+		// Purge unused objects and flush caches.
+		Flush();
+		GObj.CollectGarbage( GSystem, RF_Intrinsic );
 #endif
+	}
 
 	// Create default URL.
 	FURL DefaultURL;

@@ -332,6 +332,13 @@ UBOOL UTcpNetDriver::Init( UBOOL Connect, FNetworkNotify* InNotify, FURL& URL, c
 
 	// Get this host name.
 #ifdef PLATFORM_DREAMCAST
+	net_ipv4_get_stats();
+	if (!net_default_dev)
+	{
+		// TODO: Modem
+		appSprintf( Error256, "No network devices available" );
+		return 0;
+	}
 	appStrcpy( HostName, "localhost" );
 #else
 	if( gethostname( HostName, 256 ) )
@@ -361,6 +368,12 @@ UBOOL UTcpNetDriver::Init( UBOOL Connect, FNetworkNotify* InNotify, FURL& URL, c
 	}
 	else
 	{
+#ifdef PLATFORM_DREAMCAST
+		IPBYTE(HostAddr, 1) = net_default_dev->ip_addr[0];
+		IPBYTE(HostAddr, 2) = net_default_dev->ip_addr[1];
+		IPBYTE(HostAddr, 3) = net_default_dev->ip_addr[2];
+		IPBYTE(HostAddr, 4) = net_default_dev->ip_addr[3];
+#else
 		HOSTENT* HostEnt = gethostbyname( HostName ); 
 		if( HostEnt==NULL || HostEnt->h_addrtype!=PF_INET )
 		{
@@ -368,6 +381,7 @@ UBOOL UTcpNetDriver::Init( UBOOL Connect, FNetworkNotify* InNotify, FURL& URL, c
 			return 0;
 		}
 		HostAddr = *(in_addr*)( *HostEnt->h_addr_list );
+#endif
 	}
 
 	// Create UDP socket and enable broadcasting.
@@ -378,12 +392,15 @@ UBOOL UTcpNetDriver::Init( UBOOL Connect, FNetworkNotify* InNotify, FURL& URL, c
 		appSprintf( Error256, "WinSock: socket failed (%s)", SocketError() );
 		return 0;
 	}
+
+#ifndef PLATFORM_DREAMCAST
 	INT TrueBuffer=1;
 	if( setsockopt( Socket, SOL_SOCKET, SO_BROADCAST, (char*)&TrueBuffer, sizeof(TrueBuffer) ) )
 	{
 		appSprintf( Error256, "WinSock: setsockopt SO_BROADCAST failed (%s)", SocketError() );
 		return 0;
 	}
+#endif
 
 	// Increase socket queue size, because we are polling rather than threading
 	// and thus we rely on Windows Sockets to buffer a lot of data on the server.
@@ -459,6 +476,7 @@ UBOOL UTcpNetDriver::Init( UBOOL Connect, FNetworkNotify* InNotify, FURL& URL, c
 		else
 		{
 			// Create thread to resolve the address.
+			debugf( NAME_DevNet, "Resolving '%s'...", *URL.Host );
 			GetServerConnection()->ResolveInfo = new FResolveInfo( *URL.Host );
 			appThreadSpawn(
 				ResolveThreadEntry,

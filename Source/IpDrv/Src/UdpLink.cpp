@@ -69,7 +69,11 @@ void AUdpLink::execBindPort( FFrame& Stack, BYTE*& Result )
 			if( GetSocket() != INVALID_SOCKET )
 			{
 				INT TrueBuffer=1;
+#ifdef PLATFORM_DREAMCAST
+				if( true )
+#else
 				if( setsockopt( GetSocket(), SOL_SOCKET, SO_BROADCAST, (char*)&TrueBuffer, sizeof(TrueBuffer) )==0 )
+#endif
 				{
 					sockaddr_in Addr;
 					Addr.sin_family      = AF_INET;

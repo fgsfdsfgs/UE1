@@ -17,7 +17,7 @@ extern "C" {
 #include <fatfs.h>
 }
 #endif
-KOS_INIT_FLAGS( INIT_IRQ | INIT_THD_PREEMPT | INIT_DEFAULT_ARCH );
+KOS_INIT_FLAGS( INIT_CDROM | INIT_CONTROLLER | INIT_KEYBOARD | INIT_MOUSE | INIT_VMU | INIT_NET );
 #endif
 
 #include <stdio.h>

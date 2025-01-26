@@ -25,8 +25,8 @@ typedef char* LPSTR;
 #ifdef PLATFORM_WIN32
 #define IPBYTE(A, N) A.S_un.S_un_b.s_b##N
 #else
-#define INVALID_SOCKET 1
-#define SOCKET_ERROR 1
+#define INVALID_SOCKET -1
+#define SOCKET_ERROR -1
 #define WSAEWOULDBLOCK EAGAIN // EWOULDBLOCK?
 #define WSAENOTSOCK ENOTSOCK
 #define WSAEISCONN EISCONN
@@ -40,6 +40,10 @@ typedef char* LPSTR;
 #endif
 
 #ifdef PLATFORM_DREAMCAST
+
+#include <kos/net.h>
+#include <ppp/ppp.h>
+#include <dc/modem/modem.h>
 
 struct linger {
 	int l_onoff;
