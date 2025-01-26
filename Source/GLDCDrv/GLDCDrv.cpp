@@ -799,10 +799,7 @@ void UGLDCRenderDevice::UploadTexture( FTextureInfo& Info, const UBOOL NewTextur
 			UploadBuffer = ConvertTextureMipBGRA7777( Mip );
 		}
 		// Upload to GL.
-		// if( NewTexture )
-			glTexImage2D( GL_TEXTURE_2D, MipIndex, InternalFormat, USize, VSize, 0, UploadFormat, ElementFormat, (void*)UploadBuffer );
-		// else
-		// 	glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, USize, VSize, UploadFormat, ElementFormat, (void*)UploadBuffer );
+		glTexImage2D( GL_TEXTURE_2D, MipIndex, InternalFormat, USize, VSize, 0, UploadFormat, ElementFormat, (void*)UploadBuffer );
 	}
 
 	// If this wasn't a lightmap, UI texture or realtime texture, nuke it since we won't need SH4-side data for it anymore.
