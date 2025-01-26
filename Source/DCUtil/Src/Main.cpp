@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 #include "DCUtilPrivate.h"
+#include "../../Core/Src/UnLinker.h"
 
 extern CORE_API FGlobalPlatform GTempPlatform;
 extern DLL_IMPORT UBOOL GTickDue;
@@ -112,6 +113,8 @@ void FDCUtil::LoadPackages( const char *Dir )
 			if( !Pkg )
 				appErrorf(  "Package '%s' does not exist", Pkg );
 			LoadedPackages.Add( Temp, Pkg );
+			if( ULinkerLoad* Linker = GObj.GetPackageLinker( Pkg, nullptr, LOAD_KeepImports, nullptr, nullptr ) )
+				PackageGuids.Add( Pkg, Linker->Heritage(0) );
 		}
 	}
 	else
@@ -120,6 +123,8 @@ void FDCUtil::LoadPackages( const char *Dir )
 		if( !Pkg )
 			appErrorf(  "Package '%s' does not exist", Pkg );
 		LoadedPackages.Add( Path, Pkg );
+		if( ULinkerLoad* Linker = GObj.GetPackageLinker( Pkg, nullptr, LOAD_KeepImports, nullptr, nullptr ) )
+			PackageGuids.Add( Pkg, Linker->Heritage(0) );
 	}
 
 	unguard;
@@ -268,8 +273,11 @@ void FDCUtil::CommitChanges()
 		{
 			FString PkgName;
 			UPackage* Pkg;
+			FGuid* OldGuid;
 			ChangedPackages.GetPair( i, PkgName, Pkg );
-			GObj.SavePackage( Pkg, nullptr, RF_Standalone, *PkgName );
+			// Try to keep the previous version in heritage list to maintain backwards compatibility
+			OldGuid = PackageGuids.Find( Pkg );
+			GObj.SavePackage( Pkg, nullptr, RF_Standalone, *PkgName, false, OldGuid );
 		}
 	}
 
@@ -317,6 +325,30 @@ void FDCUtil::Main( )
 		for( INT i = 0; i < LoadedPackages.Size(); ++i )
 		{
 			LoadedPackages.GetPair( i, PkgPath, Pkg );
+			ConvertMusicPkg( PkgPath, Pkg );
+		}
+		CommitChanges();
+	}
+	else if( Parse( Cmd, "CVTALL=", Temp, sizeof( Temp ) - 1 ) )
+	{
+		if( Temp[0] == '*' && Temp[0] == 0 )
+		{
+			LoadPackages( "../Textures/*.utx" );
+			LoadPackages( "../Sounds/*.uax" );
+			LoadPackages( "../Music/*.umx" );
+			LoadPackages( "../System/*.u" );
+		}
+		else
+		{
+			if( !appStrchr( Temp, '.' ) )
+				appErrorf( "Specify filename with extension." );
+			LoadPackages( Temp );
+		}
+		for( INT i = 0; i < LoadedPackages.Size(); ++i )
+		{
+			LoadedPackages.GetPair( i, PkgPath, Pkg );
+			ConvertTexturePkg( PkgPath, Pkg );
+			ConvertSoundPkg( PkgPath, Pkg );
 			ConvertMusicPkg( PkgPath, Pkg );
 		}
 		CommitChanges();

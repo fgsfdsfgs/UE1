@@ -431,7 +431,7 @@ public:
 	virtual void AddToRoot( UObject* Res );
 	virtual void RemoveFromRoot( UObject* Res );
 	virtual UObject* LoadPackage( UObject* InParent, const char* Filename, DWORD LoadFlags );
-	virtual UBOOL SavePackage( UObject* InParent, UObject* Base, DWORD TopLevelFlags, const char* Filename, UBOOL NoWarn=0 );
+	virtual UBOOL SavePackage( UObject* InParent, UObject* Base, DWORD TopLevelFlags, const char* Filename, UBOOL NoWarn=0, const FGuid* AddGuid=nullptr );
 	virtual void CollectGarbage( FOutputDevice* Out, DWORD KeepFlags );
 	virtual UBOOL IsReferenced( UObject*& Res, DWORD KeepFlags, UBOOL IgnoreReference );
 	virtual UBOOL AttemptDelete( UObject*& Res, DWORD KeepFlags, UBOOL IgnoreReference );

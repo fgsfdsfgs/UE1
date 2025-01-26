@@ -24,6 +24,7 @@ private:
 	UEngine* Engine = nullptr;
 	TMap<FString, UPackage*> LoadedPackages;
 	TMap<FString, UPackage*> ChangedPackages;
+	TMap<UPackage*, FGuid> PackageGuids;
 	TArray<UPalette*> UnrefPalettes;
 	DWORD TotalPrevSize = 0;
 	DWORD TotalNewSize = 0;

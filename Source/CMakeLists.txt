@@ -311,12 +311,6 @@ else()
   set(BUILD_NOPENGLESDRV OFF)
 endif()
 
-if(BUILD_DCUTIL)
-  set(BUILD_EDITOR ON)
-  list(APPEND INSTALL_TARGETS DCUtil)
-  add_subdirectory(DCUtil)
-endif()
-
 if(BUILD_WINDRV)
   add_subdirectory(Window)
   add_subdirectory(WinDrv)
@@ -362,6 +356,12 @@ endif()
 if(BUILD_UNREAL)
   add_subdirectory(Unreal)
   list(APPEND INSTALL_TARGETS Unreal)
+endif()
+
+if(BUILD_DCUTIL)
+  set(BUILD_EDITOR ON)
+  list(APPEND INSTALL_TARGETS DCUtil)
+  add_subdirectory(DCUtil)
 endif()
 
 # assemble all modules and pdbs in one dir

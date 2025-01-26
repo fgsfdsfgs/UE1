@@ -11,6 +11,13 @@ target_include_directories(${PROJECT_NAME}
   ${CMAKE_CURRENT_SOURCE_DIR}/Src
 )
 
-target_link_libraries(${PROJECT_NAME} Engine Core)
+if(BUILD_STATIC)
+  set(LINK_PACKAGES ${INSTALL_TARGETS})
+  list(REMOVE_ITEM LINK_PACKAGES ${PROJECT_NAME})
+  list(REMOVE_ITEM LINK_PACKAGES Unreal)
+  target_link_libraries(${PROJECT_NAME} -Wl,--whole-archive ${LINK_PACKAGES} -Wl,--no-whole-archive)
+else()
+  target_link_libraries(${PROJECT_NAME} Engine Core)
+endif()
 
 target_compile_definitions(${PROJECT_NAME} PRIVATE DCUTIL_EXPORTS UPACKAGE_NAME=${PROJECT_NAME})

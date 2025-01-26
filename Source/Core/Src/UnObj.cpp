@@ -2056,7 +2056,7 @@ public:
 //
 // Save one specific object into an Unrealfile.
 //
-UBOOL FObjectManager::SavePackage( UObject* InParent, UObject* Base, DWORD TopLevelFlags, const char* Filename, UBOOL NoWarn )
+UBOOL FObjectManager::SavePackage( UObject* InParent, UObject* Base, DWORD TopLevelFlags, const char* Filename, UBOOL NoWarn, const FGuid* AddGuid )
 {
 	guard(FObjectManager::SavePackage);
 	check(InParent);
@@ -2168,6 +2168,8 @@ UBOOL FObjectManager::SavePackage( UObject* InParent, UObject* Base, DWORD TopLe
 
 		// Save heritage.
 		guard(SaveHeritage);
+		if( AddGuid )
+			Linker->Heritage.AddUniqueItem( *AddGuid );
 		Linker->Heritage.AddItem( appCreateGuid() );
 		Linker->Summary.HeritageCount = Linker->Heritage.Num();
 		Linker->Summary.HeritageOffset = Linker->Tell();
