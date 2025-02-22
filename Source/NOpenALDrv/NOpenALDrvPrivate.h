@@ -88,6 +88,7 @@ private:
 	BYTE MusicSection;
 	ALuint MusicSource;
 	UBOOL MusicIsPlaying = false;
+	UBOOL MusicIsLoaded = false;
 
 	BYTE MusicBufferData[STREAM_BUFSIZE];
 	ALuint MusicBuffers[NUM_MUSIC_BUFFERS];

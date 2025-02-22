@@ -295,6 +295,7 @@ void UNOpenALAudioSubsystem::RegisterMusic( UMusic* Music )
 	}
 
 	Music->Handle = (void*)1;
+	MusicIsLoaded = true;
 
 	unguard;
 }
@@ -310,8 +311,11 @@ void UNOpenALAudioSubsystem::UnregisterMusic( UMusic* Music )
 	if( MusicCtx )
 	{
 		xmp_end_player( MusicCtx );
-		xmp_release_module( MusicCtx );
+		if( MusicIsLoaded )
+			xmp_release_module( MusicCtx );
 	}
+
+	MusicIsLoaded = false;
 
 	unguard;
 }
