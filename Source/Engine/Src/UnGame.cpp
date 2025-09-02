@@ -376,13 +376,13 @@ UBOOL UGameEngine::Browse( FURL URL, char* Error256 )
 			for( i=0; i<GLevel->GetLevelInfo()->HubStackLevel; i++ )
 			{
 				char Src[256], Dest[256];
-				appSprintf( Src, "%s\\Save%i%i.usa", GSys->SavePath, appAtoi(Option), i );
-				appSprintf( Dest, "%s\\Game%i.usa", GSys->SavePath, i );
+				appSprintf( Src, "%s" PATH_SEPARATOR "Save%i%i.usa", PATH(GSys->SavePath), appAtoi(Option), i );
+				appSprintf( Dest, "%s" PATH_SEPARATOR "Game%i.usa", PATH(GSys->SavePath), i );
 				appCopyFile( Src, Dest );
 			}
 			while( 1 )
 			{
-				appSprintf( Temp, "%s\\Game%i.usa", GSys->SavePath, i++ );
+				appSprintf( Temp, "%s" PATH_SEPARATOR "Game%i.usa", PATH(GSys->SavePath), i++ );
 				if( appFSize(Temp)<=0 )
 					break;
 				appUnlink( Temp );
@@ -485,7 +485,7 @@ ULevel* UGameEngine::LoadMap( const FURL& URL, UPendingLevel* Pending, char* Err
 				Guid = &Connection->Driver->Map(0).Guid;
 			}
 		}
-		LoadObject<ULevel>( MapParent, "MyLevel", *URL.Map, LOAD_Verify | LOAD_Throw | LOAD_KeepImports | LOAD_NoWarn, NULL );
+		LoadObject<ULevel>( MapParent, "MyLevel", PATH(*URL.Map), LOAD_Verify | LOAD_Throw | LOAD_KeepImports | LOAD_NoWarn, NULL );
 	}
 	catch( char* Error )
 	{
@@ -533,7 +533,7 @@ ULevel* UGameEngine::LoadMap( const FURL& URL, UPendingLevel* Pending, char* Err
 			// Save the current level sans players actors.
 			GLevel->CleanupDestroyed( 1 );
 			char Filename[256];
-			appSprintf( Filename, "%s\\Game%i.usa", GSys->SavePath, SavedHubStackLevel );
+			appSprintf( Filename, "%s" PATH_SEPARATOR "Game%i.usa", PATH(GSys->SavePath), SavedHubStackLevel );
 			GObj.SavePackage( GLevel->GetParent(), GLevel, 0, Filename );
 		}
 		GLevel = NULL;
@@ -544,7 +544,7 @@ ULevel* UGameEngine::LoadMap( const FURL& URL, UPendingLevel* Pending, char* Err
 	guard(LoadLevel);
 	if( MapParent && Guid )
 		GObj.GetPackageLinker( MapParent, NULL, LOAD_Verify | LOAD_Throw | LOAD_KeepImports | LOAD_NoWarn, NULL, Guid );
-	GLevel = LoadObject<ULevel>( MapParent, "MyLevel", *URL.Map, LOAD_KeepImports | LOAD_NoFail, NULL );
+	GLevel = LoadObject<ULevel>( MapParent, "MyLevel", PATH(*URL.Map), LOAD_KeepImports | LOAD_NoFail, NULL );
 	check(!GLevel->NetDriver);
 	unguard;
 
@@ -1179,8 +1179,8 @@ void UGameEngine::SaveGame( INT Position )
 {
 	guard(UGameEngine::SaveGame);
 	char Filename[256];
-	appMkdir( GSys->SavePath );
-	appSprintf( Filename, "%s\\Save%i.usa", GSys->SavePath, Position );
+	appMkdir( PATH(GSys->SavePath) );
+	appSprintf( Filename, "%s" PATH_SEPARATOR "Save%i.usa", PATH(GSys->SavePath), Position );
 	GLevel->GetLevelInfo()->LevelAction=LEVACT_Saving;
 	PaintProgress();
 	GSystem->BeginSlowTask( LocalizeProgress("Saving"), 1, 0 );
@@ -1197,13 +1197,13 @@ void UGameEngine::SaveGame( INT Position )
 		for( i=0; i<GLevel->GetLevelInfo()->HubStackLevel; i++ )
 		{
 			char Src[256], Dest[256];
-			appSprintf( Src, "%s\\Game%i.usa", GSys->SavePath, i );
-			appSprintf( Dest, "%s\\Save%i%i.usa", GSys->SavePath, Position, i );
+			appSprintf( Src, "%s" PATH_SEPARATOR "Game%i.usa", PATH(GSys->SavePath), i );
+			appSprintf( Dest, "%s" PATH_SEPARATOR "Save%i%i.usa", PATH(GSys->SavePath), Position, i );
 			appCopyFile( Src, Dest );
 		}
 		while( 1 )
 		{
-			appSprintf( Filename, "%s\\Save%i%i.usa", GSys->SavePath, Position, i++ );
+			appSprintf( Filename, "%s" PATH_SEPARATOR "Save%i%i.usa", PATH(GSys->SavePath), Position, i++ );
 			if( appFSize(Filename)<=0 )
 				break;
 			appUnlink( Filename );

@@ -139,11 +139,15 @@ typedef struct _iobuf FILE;
 #define USEEK_END 2
 #define USEEK_SET 0
 
+// Pathnames.
+#define PATH(s) s
+
 // NULL.
 #define NULL 0
 
 // Platform-specific strings.
 #define LINE_TERMINATOR "\r\n"
+#define PATH_SEPARATOR "\\"
 #define DLLEXT ".dll"
 
 // Package implementation.

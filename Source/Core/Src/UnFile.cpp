@@ -446,11 +446,6 @@ CORE_API TArray<FString> appFindFiles( const char* Spec )
 	// Initialize Path to Filename.
 	appStrcpy( Path, Spec );
 
-	// Convert MS "\" to Unix "/".
-	for( Cur = Path; *Cur != '\0'; Cur++ )
-		if( *Cur == '\\' )
-			*Cur = '/';
-
 	// Separate path and filename.
 	Filestart = Path;
 	for( Cur = Path; *Cur != '\0'; Cur++ )
@@ -560,13 +555,6 @@ CORE_API FILE* appFopen( const char* Path, const char* Mode )
 	// Case-insensitive search.
 	char DirNameBuf[1024], TmpName[1024];
 	appStrncpy( DirNameBuf, Path, sizeof(DirNameBuf) - 1 );
-
-	// Fixup slashes.
-	for( char* Ch = DirNameBuf; *Ch; ++Ch )
-	{
-		if( *Ch == '\\' )
-			*Ch = '/';
-	}
 
 	// Find the directory path by terminating path at the last slash, if any.
 	const char* DirName = NULL;
