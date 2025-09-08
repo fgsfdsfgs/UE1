@@ -155,7 +155,7 @@ void UNOpenGLRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Scre
 {
 	guard(UNOpenGLRenderDevice::Lock);
 
-	glClearColor( 1.f, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
+	glClearColor( ScreenClear.X, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
 	glClearDepth( 1.0 );
 	glDepthFunc( GL_LEQUAL );
 	SetBlend( PF_Occlude );
