@@ -220,7 +220,7 @@ void AActor::execGetMapName( FFrame& Stack, BYTE*& Result )
 		if( appStrstr( GSys->Paths[i], Wildcard ) )
 		{
 			char Tmp[256];
-			appStrcpy( Tmp, GSys->Paths[i] );
+			appStrcpy( Tmp, PATH(GSys->Paths[i]) );
 			*appStrstr( Tmp, Wildcard )=0;
 			appStrcat( Tmp, "/" );
 			appStrcat( Tmp, Prefix );

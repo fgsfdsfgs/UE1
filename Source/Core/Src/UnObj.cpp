@@ -2935,7 +2935,7 @@ void CacheDrivers( UBOOL ForceRefresh )
 			if( GSys->Paths[i] )
 			{
 				char Filename[256];
-				appSprintf( Filename, "%s%s", appBaseDir(), GSys->Paths[i] );
+				appSprintf( Filename, "%s%s", appBaseDir(), PATH(GSys->Paths[i]) );
 				char* Tmp = appStrstr( Filename, "*." );
 				if( Tmp )
 				{

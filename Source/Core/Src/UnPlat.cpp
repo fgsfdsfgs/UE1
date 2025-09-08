@@ -842,14 +842,6 @@ UBOOL appFindPackageFile( const char* In, const FGuid* Guid, char* Out )
 	// Try all of the predefined paths.
 	for( DWORD i=0; i<ARRAY_COUNT(GSys->Paths)+(Guid!=NULL); i++ )
 	{
-#ifndef PLATFORM_WIN32
-		// Fixup path separators.
-		for( char* Ch = GSys->Paths[i]; Ch && *Ch; ++Ch )
-		{
-			if( *Ch == '\\' )
-				*Ch = '/';
-		}
-#endif
 		// Get directory only.
 		char Temp[256];
 		char* Ext;
@@ -857,7 +849,7 @@ UBOOL appFindPackageFile( const char* In, const FGuid* Guid, char* Out )
 		{
 			if( *GSys->Paths[i]==0 )
 				continue;
-			strcpy( Temp, GSys->Paths[i] );
+			strcpy( Temp, PATH(GSys->Paths[i]) );
 			Ext = appStrstr(Temp,"*");
 			if( Ext )
 				*Ext++ = 0;
@@ -866,7 +858,7 @@ UBOOL appFindPackageFile( const char* In, const FGuid* Guid, char* Out )
 		}
 		else
 		{
-			strcpy( Temp, GSys->CachePath );
+			strcpy( Temp, PATH(GSys->CachePath) );
 			strcat( Temp, "/" );
 			Ext = GSys->CacheExt;
 			strcpy( Out, Temp );
@@ -906,7 +898,7 @@ CORE_API void appCleanFileCache()
 	char Temp[256];
 
 	// Delete all temporary files.
-	appSprintf( Temp, "%s/*.tmp", GSys->CachePath );
+	appSprintf( Temp, "%s/*.tmp", PATH(GSys->CachePath) );
 	TArray<FString> Found = appFindFiles( Temp );
 	for( INT i=0; i<Found.Num(); i++ )
 	{
@@ -916,14 +908,14 @@ CORE_API void appCleanFileCache()
 	}
 
 	// Delete cache files that are no longer wanted.
-	appSprintf( Temp, "%s/*%s", GSys->CachePath, GSys->CacheExt );
+	appSprintf( Temp, "%s/*%s", PATH(GSys->CachePath), GSys->CacheExt );
 	Found = appFindFiles( Temp );
 	if( GSys->PurgeCacheDays )
 	{
 		for( INT i=0; i<Found.Num(); i++ )
 		{
 			struct _stat Buf;
-			appSprintf( Temp, "%s/%s", GSys->CachePath, *Found(i) );
+			appSprintf( Temp, "%s/%s", PATH(GSys->CachePath), *Found(i) );
 			if( _stat(Temp,&Buf)==0 )
 			{
 				time_t CurrentTime, FileTime;
@@ -1616,6 +1608,25 @@ extern "C" CORE_API void appHandleSuspendResume( UBOOL bIsSuspending )
 		debugf( "App might be suspending, saving configs..." );
 		SaveAllConfigs();
 	}
+}
+
+/*-----------------------------------------------------------------------------
+	Pathnames.
+-----------------------------------------------------------------------------*/
+
+// Convert pathname to Unix format.
+char* appUnixPath( const char* Path )
+{
+	guard(appUnixPath);
+	static char Results[16][1024];
+	static INT Count=0;
+	char* UnixPath = Results[Count++ & 15];
+	char* Cur = UnixPath;
+	appStrncpy( UnixPath, Path, 1024 );
+	while( Cur = strchr( Cur, '\\' ) )
+		*Cur = '/';
+	return UnixPath;
+	unguard;
 }
 
 /*-----------------------------------------------------------------------------

@@ -159,6 +159,14 @@ static_assert((char)-1 < 0, "char must be signed.");
 #define USEEK_END SEEK_END
 #define USEEK_SET SEEK_SET
 
+// Pathnames.
+#ifdef PLATFORM_WIN32
+#define PATH(s) s
+#else
+#define PATH(s) appUnixPath( s )
+char* appUnixPath( const char* Path );
+#endif
+
 // NULL.
 #ifndef NULL
 #define NULL 0
@@ -167,9 +175,11 @@ static_assert((char)-1 < 0, "char must be signed.");
 // Platform-specific strings.
 #ifdef PLATFORM_WIN32
 #define LINE_TERMINATOR "\r\n"
+#define PATH_SEPARATOR "\\"
 #define DLLEXT ".dll"
 #else
 #define LINE_TERMINATOR "\n"
+#define PATH_SEPARATOR "/"
 #define DLLEXT ".so"
 #endif
 
