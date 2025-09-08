@@ -707,6 +707,8 @@ ULevel* UGameEngine::LoadMap( const FURL& URL, UPendingLevel* Pending, char* Err
 	{
 		// Lock the level.
 		debugf( NAME_Log, "Bringing %s up for play...", GLevel->GetFullName() );
+		GLevel->TimeSeconds = 0;
+		GLevel->GetLevelInfo()->TimeSeconds = 0;
 
 		// Init touching actors.
 		INT i;
