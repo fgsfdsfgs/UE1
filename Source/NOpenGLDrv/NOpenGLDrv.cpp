@@ -601,9 +601,9 @@ void UNOpenGLRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor
 	if( UseHwPalette )
 	{
 		// GL has support for palettized textures, use it. Still have to fix the alpha.
-		DWORD* DstPal = (DWORD*)Compose;
 		const DWORD* SrcPal = (const DWORD*)Palette;
 		EnsureComposeSize( 256 * 4 );
+		DWORD* DstPal = (DWORD*)Compose;
 		UploadBuf = Mip->DataPtr;
 		InternalFormat = GL_COLOR_INDEX8_EXT;
 		UploadFormat = GL_COLOR_INDEX8_EXT;
@@ -623,11 +623,11 @@ void UNOpenGLRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor
 	else
 	{
 		// No support for palettized textures. Expand to RGBA8888 and fix alpha.
-		DWORD* Dst = (DWORD*)Compose;
 		const BYTE* Src = (const BYTE*)Mip->DataPtr;
 		const DWORD* Pal = (const DWORD*)Palette;
 		const DWORD Count = Mip->USize * Mip->VSize;
 		EnsureComposeSize( Count * 4 );
+		DWORD* Dst = (DWORD*)Compose;
 		UploadBuf = Compose;
 		UploadFormat = GL_RGBA;
 		InternalFormat = GL_RGBA8;
@@ -649,10 +649,10 @@ void UNOpenGLRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor
 void UNOpenGLRenderDevice::ConvertTextureMipBGRA7777( const FMipmap* Mip, BYTE*& UploadBuf, GLenum& UploadFormat, GLenum& InternalFormat )
 {
 	// BGRA8888. This is actually a BGRA7777 lightmap, so we need to scale it.
-	BYTE* Dst = (BYTE*)Compose;
 	const BYTE* Src = (const BYTE*)Mip->DataPtr;
 	const DWORD Count = Mip->USize * Mip->VSize;
 	EnsureComposeSize( Count * 4 );
+	BYTE* Dst = (BYTE*)Compose;
 	UploadBuf = Compose;
 	InternalFormat = GL_RGBA8;
 	if( UseBGRA )
