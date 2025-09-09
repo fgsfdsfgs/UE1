@@ -47,6 +47,7 @@ UNOpenGLRenderDevice::UNOpenGLRenderDevice()
 	NoFiltering = false;
 	UseHwPalette = true;
 	UseBGRA = true;
+	CurrentBrightness = -1.f;
 }
 
 UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
@@ -158,6 +159,21 @@ void UNOpenGLRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Scre
 	glClearColor( ScreenClear.X, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
 	glClearDepth( 1.0 );
 	glDepthFunc( GL_LEQUAL );
+
+	FLOAT TargetBrightness = CurrentBrightness;
+	if (Viewport && Viewport->Client)
+		TargetBrightness = Viewport->Client->Brightness;
+	else if (CurrentBrightness < 0.f)
+		TargetBrightness = 0.5f;
+
+	if (CurrentBrightness != TargetBrightness)
+	{
+		CurrentBrightness = TargetBrightness;
+		FLOAT Gamma = 0.5 + 1.5 * CurrentBrightness;
+		SDL_Window* window = (SDL_Window*)Viewport->GetWindow();
+		SDL_SetWindowBrightness(window, Gamma);
+	}
+
 	SetBlend( PF_Occlude );
 
 	GLbitfield ClearBits = GL_DEPTH_BUFFER_BIT;

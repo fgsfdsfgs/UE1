@@ -46,6 +46,8 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	BYTE* Compose;
 	DWORD ComposeSize;
 
+	// Current state.
+	FLOAT CurrentBrightness;
 	DWORD CurrentPolyFlags;
 	FLOAT RProjZ, Aspect;
 	FLOAT RFX2, RFY2;
