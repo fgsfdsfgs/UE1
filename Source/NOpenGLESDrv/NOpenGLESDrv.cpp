@@ -224,7 +224,7 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 {
 	guard(UNOpenGLESRenderDevice::Lock);
 
-	glClearColor( 1.f, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
+	glClearColor( ScreenClear.X, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
 	glClearDepthf( 1.f );
 	glDepthFunc( GL_LEQUAL );
 
