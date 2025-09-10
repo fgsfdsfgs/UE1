@@ -569,6 +569,8 @@ void UNOpenALAudioSubsystem::PlayMusic()
 
 	FScopedLock Lock( MusicMutex );
 
+	alSourceStop(MusicSource);
+	ClearMusicBuffers();
 	xmp_set_position( MusicCtx, MusicSection );
 
 	ALint State = 0;
