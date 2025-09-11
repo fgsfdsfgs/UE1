@@ -427,7 +427,13 @@ void APawn::physWalking(FLOAT deltaTime, INT Iterations)
 	
 	FVector DesiredMove = Velocity;
 	if ( IsA(APlayerPawn::StaticClass) || (Region.Zone->ZoneVelocity.SizeSquared() > 90000) )
-		DesiredMove = DesiredMove + Region.Zone->ZoneVelocity;
+	{
+		// Add effect of velocity zone
+		// Rather than constant velocity, hacked to make sure that velocity being clamped when walking doesn't 
+		// cause the zone velocity to have too much of an effect at fast frame rates
+
+		DesiredMove = DesiredMove + Region.Zone->ZoneVelocity * 25 * deltaTime;
+	}
 	DesiredMove.Z = 0.0;
 	//-------------------------------------------------------------------------------------------
 	//Perform the move
@@ -1395,7 +1401,13 @@ void APawn::physSwimming(FLOAT deltaTime, INT Iterations)
 	FLOAT velZ = Velocity.Z;
 	FVector ZoneVel;
 	if ( this->IsA(APlayerPawn::StaticClass) || (Region.Zone->ZoneVelocity.SizeSquared() > 90000) )
-		ZoneVel = Region.Zone->ZoneVelocity;
+	{
+		// Add effect of velocity zone
+		// Rather than constant velocity, hacked to make sure that velocity being clamped when swimming doesn't 
+		// cause the zone velocity to have too much of an effect at fast frame rates
+
+		ZoneVel = Region.Zone->ZoneVelocity * 25 * deltaTime;
+	}
 	else
 		ZoneVel = FVector(0,0,0);
 	FVector Adjusted = (Velocity + ZoneVel) * deltaTime; 
