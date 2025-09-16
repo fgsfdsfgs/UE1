@@ -39,6 +39,7 @@ void UNOpenGLRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "NoFiltering",  RF_Public)UBoolProperty( CPP_PROPERTY(NoFiltering),  "Options", CPF_Config );
 	new(Class, "UseHwPalette", RF_Public)UBoolProperty( CPP_PROPERTY(UseHwPalette), "Options", CPF_Config );
 	new(Class, "UseBGRA",      RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),      "Options", CPF_Config );
+	new(Class, "UseMultiTexture", RF_Public)UBoolProperty( CPP_PROPERTY(UseMultiTexture), "Options", CPF_Config );
 	unguardSlow;
 }
 
@@ -47,6 +48,7 @@ UNOpenGLRenderDevice::UNOpenGLRenderDevice()
 	NoFiltering = false;
 	UseHwPalette = true;
 	UseBGRA = true;
+	UseMultiTexture = true;
 	CurrentBrightness = -1.f;
 }
 
@@ -73,6 +75,12 @@ UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
 	{
 		debugf( NAME_Warning, "EXT_bgra not available, disabling UseBGRA" );
 		UseBGRA = false;
+	}
+
+	if( UseMultiTexture && ( !GL_CHECK_EXT( ARB_multitexture ) || !GL_CHECK_EXT( EXT_texture_env_combine ) ) )
+	{
+		debugf( NAME_Warning, "ARB_multitexture or EXT_texture_env_combine is not available, disabling UseMultiTexture" );
+		UseMultiTexture = false;
 	}
 
 	debugf( NAME_Log, "Got OpenGL %d.%d", GLVersion.major, GLVersion.minor );
@@ -209,30 +217,39 @@ void UNOpenGLRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo& 
 	FLOAT UDot = Facet.MapCoords.XAxis | Facet.MapCoords.Origin;
 	FLOAT VDot = Facet.MapCoords.YAxis | Facet.MapCoords.Origin;
 
-	// Draw texture.
-	SetBlend( Surface.PolyFlags );
-	SetTexture( 0, *Surface.Texture, ( Surface.PolyFlags & PF_Masked ), 0.f );
-	glColor4f( 1.f, 1.f, 1.f, 1.f );
-	for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
+	if( Surface.LightMap && 1 && UseMultiTexture )
 	{
-		glBegin( GL_TRIANGLE_FAN );
-		for( INT i = 0; i < Poly->NumPts; i++ )
+		// Draw with multitexture.
+		SetBlend( Surface.PolyFlags );
+		SetTexture( 0, *Surface.Texture, ( Surface.PolyFlags & PF_Masked ), 0.0 );
+		SetTexture( 1, *Surface.LightMap, PF_Modulated, -0.5 );
+		glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE );
+		glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE );
+		glTexEnvf( GL_TEXTURE_ENV, GL_RGB_SCALE, 2.0f );
+		glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE );
+		glTexEnvi( GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, GL_PREVIOUS );
+		glTexEnvi( GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA );
+		glColor4f( 1.f, 1.f, 1.f, 1.f );
+		for( FSavedPoly* Poly=Facet.Polys; Poly; Poly=Poly->Next )
 		{
-			FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
-			FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
-			glTexCoord2f( (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
-			glVertex3f( Poly->Pts[i]->Point.X, Poly->Pts[i]->Point.Y, Poly->Pts[i]->Point.Z );
+			glBegin( GL_TRIANGLE_FAN );
+			for( INT i=0; i<Poly->NumPts; i++ )
+			{
+				FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
+				FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
+				glMultiTexCoord2fARB( GL_TEXTURE0_ARB, (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
+				glMultiTexCoord2fARB( GL_TEXTURE1_ARB, (U-UDot-TexInfo[1].UPan)*TexInfo[1].UMult, (V-VDot-TexInfo[1].VPan)*TexInfo[1].VMult );
+				glVertex3fv( &Poly->Pts[i]->Point.X );
+			}
+			glEnd();
 		}
-		glEnd();
+		ResetTexture( 1 );
 	}
-
-	// Draw lightmap.
-	if( Surface.LightMap )
+	else
 	{
-		SetBlend( PF_Modulated );
-		if( Surface.PolyFlags & PF_Masked )
-			glDepthFunc( GL_EQUAL );
-		SetTexture( 0, *Surface.LightMap, 0, -0.5 );
+		// Draw texture.
+		SetBlend( Surface.PolyFlags );
+		SetTexture( 0, *Surface.Texture, ( Surface.PolyFlags & PF_Masked ), 0.f );
 		glColor4f( 1.f, 1.f, 1.f, 1.f );
 		for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
 		{
@@ -246,8 +263,30 @@ void UNOpenGLRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo& 
 			}
 			glEnd();
 		}
-		if( Surface.PolyFlags & PF_Masked )
-			glDepthFunc( GL_LEQUAL );
+
+		// Draw lightmap.
+		if( Surface.LightMap )
+		{
+			SetBlend( PF_Modulated );
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_EQUAL );
+			SetTexture( 0, *Surface.LightMap, 0, -0.5 );
+			glColor4f( 1.f, 1.f, 1.f, 1.f );
+			for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
+			{
+				glBegin( GL_TRIANGLE_FAN );
+				for( INT i = 0; i < Poly->NumPts; i++ )
+				{
+					FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
+					FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
+					glTexCoord2f( (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
+					glVertex3f( Poly->Pts[i]->Point.X, Poly->Pts[i]->Point.Y, Poly->Pts[i]->Point.Z );
+				}
+				glEnd();
+			}
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_LEQUAL );
+		}
 	}
 
 	// Draw fog.
