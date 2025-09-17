@@ -68,6 +68,7 @@ void UNOpenGLESRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "DetailTextures", RF_Public)UBoolProperty( CPP_PROPERTY(DetailTextures), "Options", CPF_Config );
 	new(Class, "UseVAO",         RF_Public)UBoolProperty( CPP_PROPERTY(UseVAO),         "Options", CPF_Config );
 	new(Class, "UseBGRA",        RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),        "Options", CPF_Config );
+	new(Class, "AutoFOV",        RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),        "Options", CPF_Config );
 	unguardSlow;
 }
 
