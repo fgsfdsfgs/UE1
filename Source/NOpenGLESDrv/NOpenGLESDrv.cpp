@@ -78,6 +78,7 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
 	NoFiltering = false;
 	UseVAO = false;
 	UseBGRA = true;
+	AutoFOV = true;
 	CurrentBrightness = -1.f;
 }
 
@@ -252,6 +253,13 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 		ColorMod = FPlane( FlashFog.X, FlashFog.Y, FlashFog.Z, 1.f - Min( FlashScale.X * 2.f, 1.f ) );
 	else
 		ColorMod = FPlane( 0.f, 0.f, 0.f, 0.f );
+
+	if( AutoFOV && Viewport->Actor->DesiredFOV == 90.0f )
+	{
+		FLOAT aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
+		FLOAT fov = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
+		Viewport->Actor->DesiredFOV = fov;
+	}
 
 	unguard;
 }
