@@ -40,6 +40,7 @@ void UNOpenGLRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "UseHwPalette", RF_Public)UBoolProperty( CPP_PROPERTY(UseHwPalette), "Options", CPF_Config );
 	new(Class, "UseBGRA",      RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),      "Options", CPF_Config );
 	new(Class, "UseMultiTexture", RF_Public)UBoolProperty( CPP_PROPERTY(UseMultiTexture), "Options", CPF_Config );
+	new(Class, "AutoFOV",      RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),      "Options", CPF_Config );
 	unguardSlow;
 }
 
@@ -49,6 +50,7 @@ UNOpenGLRenderDevice::UNOpenGLRenderDevice()
 	UseHwPalette = true;
 	UseBGRA = true;
 	UseMultiTexture = true;
+	AutoFOV = true;
 	CurrentBrightness = -1.f;
 }
 
@@ -193,6 +195,13 @@ void UNOpenGLRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Scre
 		ColorMod = FPlane( FlashFog.X, FlashFog.Y, FlashFog.Z, 1.f - Min( FlashScale.X * 2.f, 1.f ) );
 	else
 		ColorMod = FPlane( 0.f, 0.f, 0.f, 0.f );
+
+	if( AutoFOV && Viewport->Actor->DesiredFOV == 90.0f )
+	{
+		FLOAT aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
+		FLOAT fov = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
+		Viewport->Actor->DesiredFOV = fov;
+	}
 
 	unguard;
 }
