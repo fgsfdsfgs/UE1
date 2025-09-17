@@ -222,7 +222,6 @@ void AActor::execGetMapName( FFrame& Stack, BYTE*& Result )
 			char Tmp[256];
 			appStrcpy( Tmp, PATH(GSys->Paths[i]) );
 			*appStrstr( Tmp, Wildcard )=0;
-			appStrcat( Tmp, "/" );
 			appStrcat( Tmp, Prefix );
 			appStrcat( Tmp, Wildcard );
 			TArray<FString>	TheseNames = appFindFiles(Tmp);

@@ -552,7 +552,7 @@ void appInit()
 	std::set_new_handler( UnrealAllocationErrorHandler );
 
 	// Remove stray Save.tmp if it's still present for some reason.
-	snprintf( Temp, sizeof(Temp), "%s/Save.tmp", GSys->SavePath );
+	snprintf( Temp, sizeof(Temp), "%s" PATH_SEPARATOR "Save.tmp", PATH(GSys->SavePath) );
 	appUnlink( Temp );
 }
 
@@ -859,7 +859,7 @@ UBOOL appFindPackageFile( const char* In, const FGuid* Guid, char* Out )
 		else
 		{
 			strcpy( Temp, PATH(GSys->CachePath) );
-			strcat( Temp, "/" );
+			strcat( Temp, PATH_SEPARATOR );
 			Ext = GSys->CacheExt;
 			strcpy( Out, Temp );
 			strcat( Out, Guid->String(Temp) );
@@ -898,24 +898,24 @@ CORE_API void appCleanFileCache()
 	char Temp[256];
 
 	// Delete all temporary files.
-	appSprintf( Temp, "%s/*.tmp", PATH(GSys->CachePath) );
+	appSprintf( Temp, "%s" PATH_SEPARATOR "*.tmp", PATH(GSys->CachePath) );
 	TArray<FString> Found = appFindFiles( Temp );
 	for( INT i=0; i<Found.Num(); i++ )
 	{
-		appSprintf( Temp, "%s/%s", GSys->CachePath, *Found(i) );
+		appSprintf( Temp, "%s" PATH_SEPARATOR "%s", PATH(GSys->CachePath), *Found(i) );
 		debugf( "Deleting temporary file: %s", Temp );
 		unlink( Temp );
 	}
 
 	// Delete cache files that are no longer wanted.
-	appSprintf( Temp, "%s/*%s", PATH(GSys->CachePath), GSys->CacheExt );
+	appSprintf( Temp, "%s" PATH_SEPARATOR "*%s", PATH(GSys->CachePath), GSys->CacheExt );
 	Found = appFindFiles( Temp );
 	if( GSys->PurgeCacheDays )
 	{
 		for( INT i=0; i<Found.Num(); i++ )
 		{
 			struct _stat Buf;
-			appSprintf( Temp, "%s/%s", PATH(GSys->CachePath), *Found(i) );
+			appSprintf( Temp, "%s" PATH_SEPARATOR "%s", PATH(GSys->CachePath), *Found(i) );
 			if( _stat(Temp,&Buf)==0 )
 			{
 				time_t CurrentTime, FileTime;
