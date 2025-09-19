@@ -22,6 +22,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	UBOOL NoFiltering;
 	UBOOL UseHwPalette;
 	UBOOL UseBGRA;
+	UBOOL DetailTextures;
 	UBOOL UseMultiTexture;
 	UBOOL AutoFOV;
 
@@ -47,6 +48,9 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	// Texture upload buffer;
 	BYTE* Compose;
 	DWORD ComposeSize;
+
+	// Timing.
+	INT BindCycles, ImageCycles, ComplexCycles, GouraudCycles, TileCycles;
 
 	// Current state.
 	FLOAT CurrentBrightness;
