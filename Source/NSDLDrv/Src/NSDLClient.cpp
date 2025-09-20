@@ -89,7 +89,11 @@ void UNSDLClient::Destroy()
 {
 	guard(UNSDLClient::Destroy);
 
-	Controller = NULL;
+	if (Controller)
+	{
+		SDL_GameControllerClose(Controller);
+		Controller = NULL;
+	}
 
 	SDL_QuitSubSystem( SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER );
 
