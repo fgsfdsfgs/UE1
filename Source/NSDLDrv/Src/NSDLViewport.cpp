@@ -667,6 +667,8 @@ void UNSDLViewport::MakeFullscreen( INT NewX, INT NewY, UBOOL UpdateProfile )
 		Client->SaveConfig();
 	}
 
+	SetMouseCapture(1, 1, 0);
+
 	unguard;
 }
 
@@ -759,6 +761,11 @@ UBOOL UNSDLViewport::TickInput()
 				}
 				break;
 			case SDL_KEYDOWN:
+				if( Ev.key.keysym.sym == SDLK_RETURN && (Ev.key.keysym.mod & KMOD_ALT) )
+				{
+					Exec("ToggleFullscreen", this);
+					break;
+				}
 			case SDL_KEYUP:
 				CauseInputEvent( KeyMap[Ev.key.keysym.scancode], ( Ev.type == SDL_KEYDOWN ) ? IST_Press : IST_Release );
 				break;
