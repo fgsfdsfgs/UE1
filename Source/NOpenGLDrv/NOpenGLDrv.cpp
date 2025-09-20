@@ -39,6 +39,9 @@ void UNOpenGLRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "NoFiltering",  RF_Public)UBoolProperty( CPP_PROPERTY(NoFiltering),  "Options", CPF_Config );
 	new(Class, "UseHwPalette", RF_Public)UBoolProperty( CPP_PROPERTY(UseHwPalette), "Options", CPF_Config );
 	new(Class, "UseBGRA",      RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),      "Options", CPF_Config );
+	new(Class, "DetailTextures", RF_Public)UBoolProperty( CPP_PROPERTY(DetailTextures), "Options", CPF_Config );
+	new(Class, "UseMultiTexture", RF_Public)UBoolProperty( CPP_PROPERTY(UseMultiTexture), "Options", CPF_Config );
+	new(Class, "AutoFOV",      RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),      "Options", CPF_Config );
 	unguardSlow;
 }
 
@@ -47,6 +50,10 @@ UNOpenGLRenderDevice::UNOpenGLRenderDevice()
 	NoFiltering = false;
 	UseHwPalette = true;
 	UseBGRA = true;
+	DetailTextures = true;
+	UseMultiTexture = true;
+	AutoFOV = true;
+	CurrentBrightness = -1.f;
 }
 
 UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
@@ -72,6 +79,23 @@ UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
 	{
 		debugf( NAME_Warning, "EXT_bgra not available, disabling UseBGRA" );
 		UseBGRA = false;
+	}
+
+	if( UseMultiTexture && ( !GL_CHECK_EXT( ARB_multitexture ) || !GL_CHECK_EXT( EXT_texture_env_combine ) ) )
+	{
+		debugf( NAME_Warning, "ARB_multitexture or EXT_texture_env_combine is not available, disabling UseMultiTexture" );
+		UseMultiTexture = false;
+	}
+
+	if( UseMultiTexture )
+	{
+		GLint TMUnits;
+		glGetIntegerv(GL_MAX_TEXTURE_UNITS_ARB, &TMUnits);
+		if (TMUnits < 4)
+		{
+			debugf( NAME_Warning, "Not enough texture units (%i, expected 4), disabling UseMultiTexture", TMUnits );
+			UseMultiTexture = false;
+		}
 	}
 
 	debugf( NAME_Log, "Got OpenGL %d.%d", GLVersion.major, GLVersion.minor );
@@ -137,6 +161,7 @@ void UNOpenGLRenderDevice::Flush()
 		ResetTexture( 0 );
 		ResetTexture( 1 );
 		ResetTexture( 2 );
+		ResetTexture( 3 );
 		glFinish();
 		glDeleteTextures( TexAlloc.Num(), &TexAlloc(0) );
 		TexAlloc.Empty();
@@ -155,9 +180,26 @@ void UNOpenGLRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Scre
 {
 	guard(UNOpenGLRenderDevice::Lock);
 
-	glClearColor( 1.f, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
+	BindCycles = ImageCycles = ComplexCycles = GouraudCycles = TileCycles = 0;
+
+	glClearColor( ScreenClear.X, ScreenClear.Y, ScreenClear.Z, ScreenClear.W );
 	glClearDepth( 1.0 );
 	glDepthFunc( GL_LEQUAL );
+
+	FLOAT TargetBrightness = CurrentBrightness;
+	if (Viewport && Viewport->Client)
+		TargetBrightness = Viewport->Client->Brightness;
+	else if (CurrentBrightness < 0.f)
+		TargetBrightness = 0.5f;
+
+	if (CurrentBrightness != TargetBrightness)
+	{
+		CurrentBrightness = TargetBrightness;
+		FLOAT Gamma = 0.5 + 1.5 * CurrentBrightness;
+		SDL_Window* window = (SDL_Window*)Viewport->GetWindow();
+		SDL_SetWindowBrightness(window, Gamma);
+	}
+
 	SetBlend( PF_Occlude );
 
 	GLbitfield ClearBits = GL_DEPTH_BUFFER_BIT;
@@ -169,6 +211,13 @@ void UNOpenGLRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Scre
 		ColorMod = FPlane( FlashFog.X, FlashFog.Y, FlashFog.Z, 1.f - Min( FlashScale.X * 2.f, 1.f ) );
 	else
 		ColorMod = FPlane( 0.f, 0.f, 0.f, 0.f );
+
+	if( AutoFOV && Viewport->Actor->DesiredFOV == 90.0f )
+	{
+		FLOAT aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
+		FLOAT fov = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
+		Viewport->Actor->DesiredFOV = fov;
+	}
 
 	unguard;
 }
@@ -190,33 +239,82 @@ void UNOpenGLRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo& 
 
 	SetSceneNode( Frame );
 
+	uclock(ComplexCycles);
+
 	FLOAT UDot = Facet.MapCoords.XAxis | Facet.MapCoords.Origin;
 	FLOAT VDot = Facet.MapCoords.YAxis | Facet.MapCoords.Origin;
 
-	// Draw texture.
-	SetBlend( Surface.PolyFlags );
-	SetTexture( 0, *Surface.Texture, ( Surface.PolyFlags & PF_Masked ), 0.f );
-	glColor4f( 1.f, 1.f, 1.f, 1.f );
-	for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
+	if( UseMultiTexture)
 	{
-		glBegin( GL_TRIANGLE_FAN );
-		for( INT i = 0; i < Poly->NumPts; i++ )
+		// Draw with multitexture.
+		SetBlend( Surface.PolyFlags );
+		SetTexture( 0, *Surface.Texture, ( Surface.PolyFlags & PF_Masked ), 0.0 );
+		if( Surface.LightMap )
 		{
-			FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
-			FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
-			glTexCoord2f( (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
-			glVertex3f( Poly->Pts[i]->Point.X, Poly->Pts[i]->Point.Y, Poly->Pts[i]->Point.Z );
+			SetTexture( 1, *Surface.LightMap, 0, -0.5f );
+			glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE );
+			glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE );
+			glTexEnvf( GL_TEXTURE_ENV, GL_RGB_SCALE, 2.0f );
+			glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE );
+			glTexEnvi( GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, GL_PREVIOUS );
+			glTexEnvi( GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA );
 		}
-		glEnd();
+		if( Surface.DetailTexture && DetailTextures )
+		{
+			SetTexture( 2, *Surface.DetailTexture, 0, 0.f );
+			glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE );
+			glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_MODULATE );
+			glTexEnvf( GL_TEXTURE_ENV, GL_RGB_SCALE, 2.0f );
+			glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE );
+			glTexEnvi( GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, GL_PREVIOUS );
+			glTexEnvi( GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA );
+		}
+		if( Surface.FogMap )
+		{
+			SetTexture( 3, *Surface.FogMap, 0, -0.5f );
+			glTexEnvi( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE );
+			glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_ADD );
+			glTexEnvi( GL_TEXTURE_ENV, GL_COMBINE_ALPHA, GL_REPLACE );
+			glTexEnvi( GL_TEXTURE_ENV, GL_SOURCE0_ALPHA, GL_PREVIOUS );
+			glTexEnvi( GL_TEXTURE_ENV, GL_OPERAND0_ALPHA, GL_SRC_ALPHA );
+		}
+		glColor4f( 1.f, 1.f, 1.f, 1.f );
+		for( FSavedPoly* Poly=Facet.Polys; Poly; Poly=Poly->Next )
+		{
+			glBegin( GL_TRIANGLE_FAN );
+			for( INT i=0; i<Poly->NumPts; i++ )
+			{
+				FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
+				FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
+				if( TexInfo[0].CurrentCacheID != 0 )
+				{
+					glMultiTexCoord2f( GL_TEXTURE0, (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
+				}
+				if( TexInfo[1].CurrentCacheID != 0 )
+				{
+					glMultiTexCoord2f( GL_TEXTURE1, (U-UDot-TexInfo[1].UPan)*TexInfo[1].UMult, (V-VDot-TexInfo[1].VPan)*TexInfo[1].VMult );
+				}
+				if( TexInfo[2].CurrentCacheID != 0 )
+				{
+					glMultiTexCoord2f( GL_TEXTURE2, (U-UDot-TexInfo[2].UPan)*TexInfo[2].UMult, (V-VDot-TexInfo[2].VPan)*TexInfo[2].VMult );
+				}
+				if( TexInfo[3].CurrentCacheID != 0 )
+				{
+					glMultiTexCoord2f( GL_TEXTURE3, (U-UDot-TexInfo[3].UPan)*TexInfo[3].UMult, (V-VDot-TexInfo[3].VPan)*TexInfo[3].VMult );
+				}
+				glVertex3fv( &Poly->Pts[i]->Point.X );
+			}
+			glEnd();
+		}
+		ResetTexture( 1 );
+		ResetTexture( 2 );
+		ResetTexture( 3 );
 	}
-
-	// Draw lightmap.
-	if( Surface.LightMap )
+	else
 	{
-		SetBlend( PF_Modulated );
-		if( Surface.PolyFlags & PF_Masked )
-			glDepthFunc( GL_EQUAL );
-		SetTexture( 0, *Surface.LightMap, 0, -0.5 );
+		// Draw texture.
+		SetBlend( Surface.PolyFlags );
+		SetTexture( 0, *Surface.Texture, ( Surface.PolyFlags & PF_Masked ), 0.f );
 		glColor4f( 1.f, 1.f, 1.f, 1.f );
 		for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
 		{
@@ -230,32 +328,80 @@ void UNOpenGLRenderDevice::DrawComplexSurface( FSceneNode* Frame, FSurfaceInfo& 
 			}
 			glEnd();
 		}
-		if( Surface.PolyFlags & PF_Masked )
-			glDepthFunc( GL_LEQUAL );
+
+		// Draw lightmap.
+		if( Surface.LightMap )
+		{
+			SetBlend( PF_Modulated );
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_EQUAL );
+			SetTexture( 0, *Surface.LightMap, 0, -0.5 );
+			glColor4f( 1.f, 1.f, 1.f, 1.f );
+			for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
+			{
+				glBegin( GL_TRIANGLE_FAN );
+				for( INT i = 0; i < Poly->NumPts; i++ )
+				{
+					FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
+					FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
+					glTexCoord2f( (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
+					glVertex3f( Poly->Pts[i]->Point.X, Poly->Pts[i]->Point.Y, Poly->Pts[i]->Point.Z );
+				}
+				glEnd();
+			}
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_LEQUAL );
+		}
+
+		// Draw detail texture overlaid.
+		if( Surface.DetailTexture && DetailTextures )
+		{
+			SetBlend( PF_Modulated );
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_EQUAL );
+			SetTexture( 0, *Surface.DetailTexture, 0, 0.f );
+
+			for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
+			{
+				glBegin( GL_TRIANGLE_FAN );
+				for( INT i = 0; i < Poly->NumPts; i++ )
+				{
+					FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
+					FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
+					glTexCoord2f( (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
+					glVertex3f( Poly->Pts[i]->Point.X, Poly->Pts[i]->Point.Y, Poly->Pts[i]->Point.Z );
+				}
+				glEnd();
+			}
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_LEQUAL );
+		}
+
+		// Draw fog.
+		if( Surface.FogMap )
+		{
+			SetBlend( PF_Highlighted );
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_EQUAL );
+			SetTexture( 0, *Surface.FogMap, 0, -0.5 );
+			for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
+			{
+				glBegin( GL_TRIANGLE_FAN );
+				for( INT i = 0; i < Poly->NumPts; i++ )
+				{
+					FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
+					FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
+					glTexCoord2f( (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
+					glVertex3f( Poly->Pts[i]->Point.X, Poly->Pts[i]->Point.Y, Poly->Pts[i]->Point.Z );
+				}
+				glEnd();
+			}
+			if( Surface.PolyFlags & PF_Masked )
+				glDepthFunc( GL_LEQUAL );
+		}
 	}
 
-	// Draw fog.
-	if( Surface.FogMap )
-	{
-		SetBlend( PF_Highlighted );
-		if( Surface.PolyFlags & PF_Masked )
-			glDepthFunc( GL_EQUAL );
-		SetTexture( 0, *Surface.FogMap, 0, -0.5 );
-		for( FSavedPoly* Poly = Facet.Polys; Poly; Poly = Poly->Next )
-		{
-			glBegin( GL_TRIANGLE_FAN );
-			for( INT i = 0; i < Poly->NumPts; i++ )
-			{
-				FLOAT U = Facet.MapCoords.XAxis | Poly->Pts[i]->Point;
-				FLOAT V = Facet.MapCoords.YAxis | Poly->Pts[i]->Point;
-				glTexCoord2f( (U-UDot-TexInfo[0].UPan)*TexInfo[0].UMult, (V-VDot-TexInfo[0].VPan)*TexInfo[0].VMult );
-				glVertex3f( Poly->Pts[i]->Point.X, Poly->Pts[i]->Point.Y, Poly->Pts[i]->Point.Z );
-			}
-			glEnd();
-		}
-		if( Surface.PolyFlags & PF_Masked )
-			glDepthFunc( GL_LEQUAL );
-	}
+	uunclock(ComplexCycles);
 
 	unguard;
 }
@@ -265,8 +411,12 @@ void UNOpenGLRenderDevice::DrawGouraudPolygon( FSceneNode* Frame, FTextureInfo& 
 		guard(UNOpenGLRenderDevice::DrawGouraudPolygon);
 
 		SetSceneNode( Frame );
+		uclock(GouraudCycles);
 		SetBlend( PolyFlags );
 		SetTexture( 0, Texture, ( PolyFlags & PF_Masked ), 0 );
+		ResetTexture( 1 );
+		ResetTexture( 2 );
+		ResetTexture( 3 );
 
 		const UBOOL IsModulated = ( PolyFlags & PF_Modulated );
 
@@ -298,6 +448,7 @@ void UNOpenGLRenderDevice::DrawGouraudPolygon( FSceneNode* Frame, FTextureInfo& 
 			glEnd();
 		}
 
+		uunclock(GouraudCycles);
 		unguard;
 }
 
@@ -306,8 +457,12 @@ void UNOpenGLRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture, F
 	guard(UNOpenGLRenderDevice::DrawTile);
 
 	SetSceneNode( Frame );
+	uclock(TileCycles);
 	SetBlend( PolyFlags );
 	SetTexture( 0, Texture, ( PolyFlags & PF_Masked ), 0.f );
+	ResetTexture( 1 );
+	ResetTexture( 2 );
+	ResetTexture( 3 );
 
 	if( PolyFlags & PF_Modulated )
 		glColor4f( 1.f, 1.f, 1.f, 1.f );
@@ -325,6 +480,7 @@ void UNOpenGLRenderDevice::DrawTile( FSceneNode* Frame, FTextureInfo& Texture, F
 		glVertex3f( RFX2*Z*(X   -Frame->FX2), RFY2*Z*(Y+YL-Frame->FY2), Z );
 	glEnd();
 
+	uunclock(TileCycles);
 	unguard;
 }
 
@@ -348,6 +504,7 @@ void UNOpenGLRenderDevice::EndFlash( )
 	ResetTexture( 0 );
 	ResetTexture( 1 );
 	ResetTexture( 2 );
+	ResetTexture( 3 );
 	SetBlend( PF_Highlighted );
 
 	const FLOAT Z = 1.f;
@@ -383,7 +540,17 @@ void UNOpenGLRenderDevice::GetStats( char* Result )
 {
 	guard(UNOpenGLRenderDevice::GetStats)
 
-	if( Result ) *Result = '\0';
+//	if( Result ) *Result = '\0';
+	appSprintf
+	(
+		Result,
+		"OpenGL stats: Bind=%04.1f Image=%04.1f Complex=%04.1f Gouraud=%04.1f Tile=%04.1f",
+		GSecondsPerCycle*1000 * BindCycles,
+		GSecondsPerCycle*1000 * ImageCycles,
+		GSecondsPerCycle*1000 * ComplexCycles,
+		GSecondsPerCycle*1000 * GouraudCycles,
+		GSecondsPerCycle*1000 * TileCycles
+	);
 
 	unguard;
 }
@@ -394,6 +561,15 @@ void UNOpenGLRenderDevice::ReadPixels( FColor* Pixels )
 
 	glPixelStorei( GL_UNPACK_ALIGNMENT, 0 );
 	glReadPixels( 0, 0, Viewport->SizeX, Viewport->SizeY, GL_BGRA, GL_UNSIGNED_BYTE, (void*)Pixels );
+	for( INT i=0; i<Viewport->SizeY/2; i++ )
+	{
+		for( INT j=0; j<Viewport->SizeX; j++ )
+		{
+			Exchange( Pixels[j+i*Viewport->SizeX].R, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].R );
+			Exchange( Pixels[j+i*Viewport->SizeX].G, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].G );
+			Exchange( Pixels[j+i*Viewport->SizeX].B, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].B );
+		}
+	}
 
 	unguard;
 }
@@ -518,10 +694,12 @@ void UNOpenGLRenderDevice::ResetTexture( INT TMU )
 
 	if( TexInfo[TMU].CurrentCacheID != 0 )
 	{
+		uclock(BindCycles);
 		glActiveTexture( GL_TEXTURE0 + TMU );
 		glBindTexture( GL_TEXTURE_2D, 0 );
 		glDisable( GL_TEXTURE_2D );
 		TexInfo[TMU].CurrentCacheID = 0;
+		uunclock(BindCycles);
 	}
 
 	unguard;
@@ -549,6 +727,7 @@ void UNOpenGLRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD PolyFl
 		return;
 
 	// Make current.
+	uclock(BindCycles);
 	Tex.CurrentCacheID = NewCacheID;
 	FCachedTexture* Bind = BindMap.Find( NewCacheID );
 	FCachedTexture* OldBind = Bind;
@@ -563,6 +742,7 @@ void UNOpenGLRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD PolyFl
 	glActiveTexture( GL_TEXTURE0 + TMU );
 	glEnable( GL_TEXTURE_2D );
 	glBindTexture( GL_TEXTURE_2D, Bind->Id );
+	uunclock(BindCycles);
 
 	if( !OldBind || RealtimeChanged )
 	{
@@ -601,9 +781,9 @@ void UNOpenGLRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor
 	if( UseHwPalette )
 	{
 		// GL has support for palettized textures, use it. Still have to fix the alpha.
-		DWORD* DstPal = (DWORD*)Compose;
 		const DWORD* SrcPal = (const DWORD*)Palette;
 		EnsureComposeSize( 256 * 4 );
+		DWORD* DstPal = (DWORD*)Compose;
 		UploadBuf = Mip->DataPtr;
 		InternalFormat = GL_COLOR_INDEX8_EXT;
 		UploadFormat = GL_COLOR_INDEX8_EXT;
@@ -623,11 +803,11 @@ void UNOpenGLRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor
 	else
 	{
 		// No support for palettized textures. Expand to RGBA8888 and fix alpha.
-		DWORD* Dst = (DWORD*)Compose;
 		const BYTE* Src = (const BYTE*)Mip->DataPtr;
 		const DWORD* Pal = (const DWORD*)Palette;
 		const DWORD Count = Mip->USize * Mip->VSize;
 		EnsureComposeSize( Count * 4 );
+		DWORD* Dst = (DWORD*)Compose;
 		UploadBuf = Compose;
 		UploadFormat = GL_RGBA;
 		InternalFormat = GL_RGBA8;
@@ -649,10 +829,10 @@ void UNOpenGLRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor
 void UNOpenGLRenderDevice::ConvertTextureMipBGRA7777( const FMipmap* Mip, BYTE*& UploadBuf, GLenum& UploadFormat, GLenum& InternalFormat )
 {
 	// BGRA8888. This is actually a BGRA7777 lightmap, so we need to scale it.
-	BYTE* Dst = (BYTE*)Compose;
 	const BYTE* Src = (const BYTE*)Mip->DataPtr;
 	const DWORD Count = Mip->USize * Mip->VSize;
 	EnsureComposeSize( Count * 4 );
+	BYTE* Dst = (BYTE*)Compose;
 	UploadBuf = Compose;
 	InternalFormat = GL_RGBA8;
 	if( UseBGRA )
@@ -691,6 +871,7 @@ void UNOpenGLRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOO
 	}
 
 	// Upload all mips.
+	uclock(ImageCycles);
 	for( INT MipIndex = 0; MipIndex < Info.NumMips; ++MipIndex )
 	{
 		const FMipmap* Mip = Info.Mips[MipIndex];
@@ -710,6 +891,7 @@ void UNOpenGLRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOO
 		else
 			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 	}
+	uunclock(ImageCycles);
 
 	unguard;
 }

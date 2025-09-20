@@ -93,7 +93,7 @@ void main()
 	Out.rgb = vVtxFog.rgb + Out.rgb * (1.0 - vVtxFog.a);
 #endif
 
-	Out.rgb *= 0.5 + uBrightness;
+	Out.rgb *= 0.5 + 1.5 * uBrightness;
 
 	gl_FragColor = Out;
 }

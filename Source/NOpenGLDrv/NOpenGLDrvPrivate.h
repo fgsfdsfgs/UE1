@@ -22,6 +22,9 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	UBOOL NoFiltering;
 	UBOOL UseHwPalette;
 	UBOOL UseBGRA;
+	UBOOL DetailTextures;
+	UBOOL UseMultiTexture;
+	UBOOL AutoFOV;
 
 	// All currently cached textures.
 	struct FCachedTexture
@@ -46,6 +49,11 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	BYTE* Compose;
 	DWORD ComposeSize;
 
+	// Timing.
+	INT BindCycles, ImageCycles, ComplexCycles, GouraudCycles, TileCycles;
+
+	// Current state.
+	FLOAT CurrentBrightness;
 	DWORD CurrentPolyFlags;
 	FLOAT RProjZ, Aspect;
 	FLOAT RFX2, RFY2;
