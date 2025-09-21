@@ -16,6 +16,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 {
 	DECLARE_CLASS_WITHOUT_CONSTRUCT(UNOpenGLRenderDevice, URenderDevice, CLASS_Config)
 
+	// texture, lightmap, detail, fogmap
 	static constexpr INT MaxTexUnits = 4;
 
 	// Options.
@@ -100,4 +101,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	void EnsureComposeSize( const DWORD NewSize );
 	void ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked, BYTE*& UploadBuf, GLenum& UploadFormat, GLenum& InternalFormat );
 	void ConvertTextureMipBGRA7777( const FMipmap* Mip, BYTE*& UploadBuf, GLenum& UploadFormat, GLenum& InternalFormat );
+
+	void DrawComplexSurfaceMultiTex( FSceneNode* Frame, FSurfaceInfo& Surface, FSurfaceFacet& Facet );
+	void DrawComplexSurfaceSingleTex( FSceneNode* Frame, FSurfaceInfo& Surface, FSurfaceFacet& Facet );
 };
