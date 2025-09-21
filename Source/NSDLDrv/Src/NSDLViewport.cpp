@@ -287,7 +287,7 @@ void UNSDLViewport::OpenWindow( void* InParentWindow, UBOOL Temporary, INT NewX,
 			DoOpenGL = 1;
 		}
 		if( DoOpenGL && appStrstr( Temp, "GLES" ) )
-			GLProfile = SDL_GL_CONTEXT_PROFILE_COMPATIBILITY;
+			GLProfile = SDL_GL_CONTEXT_PROFILE_ES;
 	}
 
 	// User window of launcher if no parent window was specified.
