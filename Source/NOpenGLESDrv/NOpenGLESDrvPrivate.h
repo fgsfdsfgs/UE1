@@ -65,6 +65,7 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	UBOOL DetailTextures;
 	UBOOL UseVAO;
 	UBOOL AutoFOV;
+	INT SwapInterval;
 
 	// All currently cached textures.
 	struct FCachedTexture
@@ -177,6 +178,7 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	void ResetTexture( INT TMU );
 	void UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture );
 	void UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags );
+	void UpdateSwapInterval();
 
 private:
 	// Fixed function mode emulation.

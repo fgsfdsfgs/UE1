@@ -27,6 +27,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	UBOOL UseMultiTexture;
 	UBOOL AutoFOV;
 	UBOOL UseWindowBrightness;
+	INT SwapInterval;
 
 	// All currently cached textures.
 	struct FCachedTexture
@@ -77,6 +78,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	// URenderDevice interface.
 	virtual UBOOL Init( UViewport* InViewport ) override;
 	virtual void Exit() override;
+	virtual void PostEditChange() override;
 	virtual void Flush() override;
 	virtual UBOOL Exec( const char* Cmd, FOutputDevice* Out ) override;
 	virtual void Lock( FPlane FlashScale, FPlane FlashFog, FPlane ScreenClear, DWORD RenderLockFlags, BYTE* InHitData, INT* InHitSize ) override;
@@ -102,6 +104,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	void EnsureComposeSize( const DWORD NewSize );
 	void ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked, BYTE*& UploadBuf, GLenum& UploadFormat, GLenum& InternalFormat );
 	void ConvertTextureMipBGRA7777( const FMipmap* Mip, BYTE*& UploadBuf, GLenum& UploadFormat, GLenum& InternalFormat );
+	void UpdateSwapInterval();
 
 	void DrawComplexSurfaceMultiTex( FSceneNode* Frame, FSurfaceInfo& Surface, FSurfaceFacet& Facet );
 	void DrawComplexSurfaceSingleTex( FSceneNode* Frame, FSurfaceInfo& Surface, FSurfaceFacet& Facet );

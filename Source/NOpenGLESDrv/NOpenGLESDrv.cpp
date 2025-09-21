@@ -69,6 +69,7 @@ void UNOpenGLESRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "UseVAO",         RF_Public)UBoolProperty( CPP_PROPERTY(UseVAO),         "Options", CPF_Config );
 	new(Class, "UseBGRA",        RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),        "Options", CPF_Config );
 	new(Class, "AutoFOV",        RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),        "Options", CPF_Config );
+	new(Class, "SwapInterval",   RF_Public)UIntProperty ( CPP_PROPERTY(SwapInterval),   "Options", CPF_Config );
 	unguardSlow;
 }
 
@@ -81,6 +82,7 @@ UNOpenGLESRenderDevice::UNOpenGLESRenderDevice()
 	UseBGRA = true;
 	AutoFOV = true;
 	CurrentBrightness = -1.f;
+	SwapInterval = 1;
 }
 
 UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
@@ -98,6 +100,8 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	NoVolumetricBlend = true;
 	SupportsFogMaps = true;
 	SupportsDistanceFog = true;
+
+	UpdateSwapInterval();
 
 	ComposeSize = 256 * 256 * 4;
 	Compose = (BYTE*)appMalloc( ComposeSize, "GLComposeBuf" );
@@ -193,6 +197,8 @@ void UNOpenGLESRenderDevice::PostEditChange()
 	guard(UNOpenGLESRenderDevice::PostEditChange)
 
 	Super::PostEditChange();
+
+	UpdateSwapInterval();
 
 	unguard;
 }
@@ -991,6 +997,29 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 		else
 			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+	}
+
+	unguard;
+}
+
+void UNOpenGLESRenderDevice::UpdateSwapInterval()
+{
+	guard(UNOpenGLESRenderDevice::UpdateSwapInterval);
+
+	if( SwapInterval < -1 )
+	{
+		SwapInterval = -1;
+	}
+
+	if( SDL_GL_SetSwapInterval( SwapInterval ) < 0 )
+	{
+		debugf( NAME_Warning, "Failed to set swap interval %d: %s", SwapInterval, SDL_GetError() );
+		if( SwapInterval < 0 )
+		{
+			// Adaptive VSync not supported, try normal VSync.
+			SwapInterval = 1;
+			UpdateSwapInterval();
+		}
 	}
 
 	unguard;

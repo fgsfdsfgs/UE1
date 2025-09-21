@@ -43,6 +43,7 @@ void UNOpenGLRenderDevice::InternalClassInitializer( UClass* Class )
 	new(Class, "UseMultiTexture",     RF_Public)UBoolProperty( CPP_PROPERTY(UseMultiTexture),     "Options", CPF_Config );
 	new(Class, "AutoFOV",             RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),             "Options", CPF_Config );
 	new(Class, "UseWindowBrightness", RF_Public)UBoolProperty( CPP_PROPERTY(UseWindowBrightness), "Options", CPF_Config );
+	new(Class, "SwapInterval",        RF_Public)UIntProperty ( CPP_PROPERTY(SwapInterval),        "Options", CPF_Config );
 	unguardSlow;
 }
 
@@ -56,6 +57,7 @@ UNOpenGLRenderDevice::UNOpenGLRenderDevice()
 	AutoFOV = true;
 	UseWindowBrightness = true;
 	CurrentBrightness = -1.f;
+	SwapInterval = 1;
 }
 
 UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
@@ -70,6 +72,8 @@ UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
 
 	SupportsFogMaps = true;
 	SupportsDistanceFog = true;
+
+	UpdateSwapInterval();
 
 	if( UseHwPalette && !GL_CHECK_EXT( EXT_paletted_texture ) )
 	{
@@ -149,6 +153,17 @@ void UNOpenGLRenderDevice::Exit()
 		Compose = NULL;
 	}
 	ComposeSize = 0;
+
+	unguard;
+}
+
+void UNOpenGLRenderDevice::PostEditChange()
+{
+	guard(UNOpenGLRenderDevice::PostEditChange)
+
+	Super::PostEditChange();
+
+	UpdateSwapInterval();
 
 	unguard;
 }
@@ -907,6 +922,29 @@ void UNOpenGLRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOO
 			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 	}
 	uunclock(ImageCycles);
+
+	unguard;
+}
+
+void UNOpenGLRenderDevice::UpdateSwapInterval()
+{
+	guard(UNOpenGLRenderDevice::UpdateSwapInterval);
+
+	if( SwapInterval < -1 )
+	{
+		SwapInterval = -1;
+	}
+
+	if( SDL_GL_SetSwapInterval( SwapInterval ) < 0 )
+	{
+		debugf( NAME_Warning, "Failed to set swap interval %d: %s", SwapInterval, SDL_GetError() );
+		if( SwapInterval < 0 )
+		{
+			// Adaptive VSync not supported, try normal VSync.
+			SwapInterval = 1;
+			UpdateSwapInterval();
+		}
+	}
 
 	unguard;
 }
