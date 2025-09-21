@@ -115,7 +115,7 @@ jobs:
       - name: Install host dependencies
         run: |
           apt-get -y update
-          apt-get -y install sudo git make cmake patch curl wget
+          apt-get -y install sudo git make cmake patch curl wget tar gzip bzip2 python3
       - name: Set PATH
         run: echo "$VITASDK/bin" >> $GITHUB_PATH
       - name: Install VitaSDK and vdpm packages
