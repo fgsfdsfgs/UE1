@@ -411,22 +411,43 @@ void UNOpenALAudioSubsystem::UpdateVoice( INT Num, const ENVoiceOp Op )
 	FNVoice& Voice = Voices[Num];
 
 	// Swap position and velocity into AL space.
-	FVector ALLocation;
-	ALLocation.X = Voice.Location.X;
-	ALLocation.Y = Voice.Location.Y;
-	ALLocation.Z = -Voice.Location.Z;
 	FVector ALVelocity;
 	ALVelocity.X = Voice.Velocity.X;
 	ALVelocity.Y = Voice.Velocity.Y;
 	ALVelocity.Z = -Voice.Velocity.Z;
 
+	// If the source is close enough to the listener, don't spatialize it.
+	DWORD SourceRelative;
+	FVector ALLocation;
+	if( FDistSquared( ListenerCoords.Origin, Voice.Location ) < Square( Voice.Radius * DESPATIALIZE_FACTOR ) )
+	{
+		SourceRelative = AL_TRUE;
+		ALLocation.X = 0.f;
+		ALLocation.Y = 0.f;
+		ALLocation.Z = 0.f;
+		// If the source is ON the listener, also reset the velocity so we don't doppler our own voice.
+		if( Viewport && Viewport->Actor && Voice.Actor == Viewport->Actor )
+		{
+			ALVelocity.X = 0.f;
+			ALVelocity.Y = 0.f;
+			ALVelocity.Z = 0.f;
+		}
+	}
+	else
+	{
+		SourceRelative = AL_FALSE;
+		ALLocation.X = Voice.Location.X;
+		ALLocation.Y = Voice.Location.Y;
+		ALLocation.Z = -Voice.Location.Z;
+	}
+
 	// Set up AL source.
 	ALuint Source = Sources[Num];
-	alSourcei( Source, AL_SOURCE_RELATIVE, AL_FALSE );
+	alSourcei( Source, AL_SOURCE_RELATIVE, SourceRelative );
 	alSourcef( Source, AL_GAIN, Voice.Volume * ( SoundVolume / 255.f ) );
 	alSourcef( Source, AL_PITCH, Voice.Pitch );
 	alSourcef( Source, AL_MAX_DISTANCE, Voice.Radius );
-	alSourcef( Source, AL_REFERENCE_DISTANCE, Voice.Radius * 0.1f );
+	alSourcef( Source, AL_REFERENCE_DISTANCE, Voice.Radius * DESPATIALIZE_FACTOR );
 	alSourcef( Source, AL_ROLLOFF_FACTOR, ROLLOFF_FACTOR );
 	alSourcefv( Source, AL_POSITION, &ALLocation.X );
 	alSourcefv( Source, AL_VELOCITY, &ALVelocity.X );
@@ -636,6 +657,7 @@ void UNOpenALAudioSubsystem::Update( FPointRegion Region, FCoords& Listener )
 	alListenerfv( AL_POSITION, &ALPosition.X );
 	alListenerfv( AL_VELOCITY, &ALVelocity.X );
 	alListenerfv( AL_ORIENTATION, ALOrientation );
+	ListenerCoords = Listener;
 
 	if( UseReverb )
 		UpdateReverb( Region );

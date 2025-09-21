@@ -28,6 +28,7 @@
 // World scale related constants, same as in ALAudio 2.4.7.
 #define DISTANCE_SCALE 0.023255814f
 #define ROLLOFF_FACTOR 1.1f
+#define DESPATIALIZE_FACTOR 0.1f
 
 class DLL_EXPORT UNOpenALAudioSubsystem : public UAudioSubsystem
 {
@@ -75,6 +76,7 @@ private:
 	ALuint Sources[MAX_SOURCES];
 	TArray<ALuint> Buffers;
 	INT NextId;
+	FCoords ListenerCoords;
 
 	ALuint ReverbEffect;
 	ALuint ReverbSlot;
