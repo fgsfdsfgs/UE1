@@ -504,16 +504,14 @@ void UNOpenGLESRenderDevice::ReadPixels( FColor* Pixels )
 	glPixelStorei( GL_UNPACK_ALIGNMENT, 0 );
 	glReadPixels( 0, 0, Viewport->SizeX, Viewport->SizeY, GL_RGBA, GL_UNSIGNED_BYTE, (void*)Pixels );
 
-	// Swap RGBA -> BGRA.
-	FColor* Ptr = Pixels;
-	for( INT Y = 0; Y < Viewport->SizeY; ++Y )
+	// Swap RGBA -> BGRA and flip vertically.
+	for( INT i=0; i<Viewport->SizeY/2; i++ )
 	{
-		for( INT X = 0; X < Viewport->SizeX; ++X, ++Ptr )
+		for( INT j=0; j<Viewport->SizeX; j++ )
 		{
-			FColor Old = *Ptr;
-			Ptr->R = Old.B;
-			Ptr->G = Old.G;
-			Ptr->B = Old.R;
+			Exchange( Pixels[j+i*Viewport->SizeX].R, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].B );
+			Exchange( Pixels[j+i*Viewport->SizeX].G, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].G );
+			Exchange( Pixels[j+i*Viewport->SizeX].B, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].R );
 		}
 	}
 

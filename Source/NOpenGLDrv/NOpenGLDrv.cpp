@@ -590,14 +590,16 @@ void UNOpenGLRenderDevice::ReadPixels( FColor* Pixels )
 	guard(UNOpenGLRenderDevice::ReadPixels);
 
 	glPixelStorei( GL_UNPACK_ALIGNMENT, 0 );
-	glReadPixels( 0, 0, Viewport->SizeX, Viewport->SizeY, GL_BGRA, GL_UNSIGNED_BYTE, (void*)Pixels );
+	glReadPixels( 0, 0, Viewport->SizeX, Viewport->SizeY, GL_RGBA, GL_UNSIGNED_BYTE, (void*)Pixels );
+
+	// Swap RGBA -> BGRA and flip vertically.
 	for( INT i=0; i<Viewport->SizeY/2; i++ )
 	{
 		for( INT j=0; j<Viewport->SizeX; j++ )
 		{
-			Exchange( Pixels[j+i*Viewport->SizeX].R, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].R );
+			Exchange( Pixels[j+i*Viewport->SizeX].R, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].B );
 			Exchange( Pixels[j+i*Viewport->SizeX].G, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].G );
-			Exchange( Pixels[j+i*Viewport->SizeX].B, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].B );
+			Exchange( Pixels[j+i*Viewport->SizeX].B, Pixels[j+(Viewport->SizeY-1-i)*Viewport->SizeX].R );
 		}
 	}
 
