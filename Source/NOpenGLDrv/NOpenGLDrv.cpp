@@ -36,12 +36,13 @@ IMPLEMENT_CLASS(UNOpenGLRenderDevice);
 void UNOpenGLRenderDevice::InternalClassInitializer( UClass* Class )
 {
 	guardSlow(UNOpenGLRenderDevice::InternalClassInitializer);
-	new(Class, "NoFiltering",  RF_Public)UBoolProperty( CPP_PROPERTY(NoFiltering),  "Options", CPF_Config );
-	new(Class, "UseHwPalette", RF_Public)UBoolProperty( CPP_PROPERTY(UseHwPalette), "Options", CPF_Config );
-	new(Class, "UseBGRA",      RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),      "Options", CPF_Config );
-	new(Class, "DetailTextures", RF_Public)UBoolProperty( CPP_PROPERTY(DetailTextures), "Options", CPF_Config );
-	new(Class, "UseMultiTexture", RF_Public)UBoolProperty( CPP_PROPERTY(UseMultiTexture), "Options", CPF_Config );
-	new(Class, "AutoFOV",      RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),      "Options", CPF_Config );
+	new(Class, "NoFiltering",         RF_Public)UBoolProperty( CPP_PROPERTY(NoFiltering),         "Options", CPF_Config );
+	new(Class, "UseHwPalette",        RF_Public)UBoolProperty( CPP_PROPERTY(UseHwPalette),        "Options", CPF_Config );
+	new(Class, "UseBGRA",             RF_Public)UBoolProperty( CPP_PROPERTY(UseBGRA),             "Options", CPF_Config );
+	new(Class, "DetailTextures",      RF_Public)UBoolProperty( CPP_PROPERTY(DetailTextures),      "Options", CPF_Config );
+	new(Class, "UseMultiTexture",     RF_Public)UBoolProperty( CPP_PROPERTY(UseMultiTexture),     "Options", CPF_Config );
+	new(Class, "AutoFOV",             RF_Public)UBoolProperty( CPP_PROPERTY(AutoFOV),             "Options", CPF_Config );
+	new(Class, "UseWindowBrightness", RF_Public)UBoolProperty( CPP_PROPERTY(UseWindowBrightness), "Options", CPF_Config );
 	unguardSlow;
 }
 
@@ -53,6 +54,7 @@ UNOpenGLRenderDevice::UNOpenGLRenderDevice()
 	DetailTextures = true;
 	UseMultiTexture = true;
 	AutoFOV = true;
+	UseWindowBrightness = true;
 	CurrentBrightness = -1.f;
 }
 
@@ -186,18 +188,20 @@ void UNOpenGLRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Scre
 	glClearDepth( 1.0 );
 	glDepthFunc( GL_LEQUAL );
 
-	FLOAT TargetBrightness = CurrentBrightness;
-	if (Viewport && Viewport->Client)
-		TargetBrightness = Viewport->Client->Brightness;
-	else if (CurrentBrightness < 0.f)
-		TargetBrightness = 0.5f;
-
-	if (CurrentBrightness != TargetBrightness)
+	if( UseWindowBrightness )
 	{
-		CurrentBrightness = TargetBrightness;
-		FLOAT Gamma = 0.5 + 1.5 * CurrentBrightness;
-		SDL_Window* window = (SDL_Window*)Viewport->GetWindow();
-		SDL_SetWindowBrightness(window, Gamma);
+		FLOAT TargetBrightness = CurrentBrightness;
+		if ( Viewport && Viewport->Client )
+			TargetBrightness = Viewport->Client->Brightness;
+		else if ( CurrentBrightness < 0.f )
+			TargetBrightness = 0.5f;
+		if ( CurrentBrightness != TargetBrightness )
+		{
+			CurrentBrightness = TargetBrightness;
+			const FLOAT Gamma = 0.5 + 1.5 * CurrentBrightness;
+			SDL_Window* Window = (SDL_Window*)Viewport->GetWindow();
+			SDL_SetWindowBrightness( Window, Gamma );
+		}
 	}
 
 	SetBlend( PF_Occlude );

@@ -26,6 +26,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	UBOOL DetailTextures;
 	UBOOL UseMultiTexture;
 	UBOOL AutoFOV;
+	UBOOL UseWindowBrightness;
 
 	// All currently cached textures.
 	struct FCachedTexture
