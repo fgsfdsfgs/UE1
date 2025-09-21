@@ -25,7 +25,7 @@ Requires assets from the original Unreal v200 retail release or from the v205 de
 3. Run `System/Unreal.exe`.
 
 ### PSVita
-1. Ensure you have kubridge and libshacccg installed.
+1. Ensure you have libshacccg installed.
 2. Install the original retail v200 release of Unreal or the v205 demo onto your PC.
 3. Copy the contents of the `Unreal` folder to `ux0:/data/unreal/` on your PSVita.
 4. Copy the `unreal` folder from `unreal-arm-psvita-gcc.zip` to `ux0:/data/`. Overwrite everything.
@@ -90,17 +90,13 @@ Requires assets from the original Unreal v200 retail release or from the v205 de
 3. The resulting files will be in `build/RelWithDebInfo` by default.
 
 ### PSVita (on Linux or WSL)
-1. Follow the instructions above to build the game for ARM Linux, **but** add `-DBUILD_FOR_PSVITA=ON` to the first cmake invocation, i.e.:
-   ```
-   cmake -G"Unix Makefiles" -DCMAKE_CROSSCOMPILING=ON -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc-12 -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++-12 -Bbuild -DBUILD_FOR_PSVITA=ON Source
-   ```
-3. Install VitaSDK with all VDPM packages and ensure the `VITASDK` environment variable is set and `$VITASDK/bin` is in your `PATH`.
-4. Build and install vitaGL:
+1. Install VitaSDK with all VDPM packages and ensure the `VITASDK` environment variable is set and `$VITASDK/bin` is in your `PATH`.
+2. Build and install vitaGL:
    ```
    git clone --recursive https://github.com/Rinnegatamante/vitaGL
-   make -C vitaGL HAVE_GLSL_SUPPORT=1 CIRCULAR_VERTEX_POOL=2 -j install
+   make -C vitaGL HAVE_GLSL_SUPPORT=1 CIRCULAR_VERTEX_POOL=2 MATH_SPEEDHACK=1 INDICES_SPEEDHACK=1 PRIMITIVES_SPEEDHACK=1 -j install
    ```
-5. Build and install SDL2:
+3. Build and install SDL2:
    ```
    git clone --recursive --branch vitagl https://github.com/Northfear/SDL
    pushd SDL
@@ -109,22 +105,12 @@ Requires assets from the original Unreal v200 retail release or from the v205 de
    cmake --install build
    popd
    ```
-6. Build and install vita-rtld:
+4. Build the VPK:
    ```
-   git clone https://github.com/fgsfdsfgs/vita-rtld
-   pushd vita-rtld
-   cmake -S. -Bbuild -DCMAKE_TOOLCHAIN_FILE=${VITASDK}/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-   cmake --build build -- -j
-   cmake --install build
-   popd
+   cmake -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${VITASDK}/share/vita.toolchain.cmake" -Bbuild -DCMAKE_BUILD_TYPE=RelWithDebInfo Source
+   cmake --build build -j
    ```
-7. Build the VPK:
-   ```
-   cmake -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${VITASDK}/share/vita.toolchain.cmake" -Bbuild_psvita -DCMAKE_BUILD_TYPE=RelWithDebInfo Source/PSVitaLoader
-   cmake --build build_psvita -j
-   ```
-8. The libraries will be in `build/RelWithDebInfo` by default. They have to be copied to `ux0:/data/unreal/System`.
-9. The VPK will be in `build_psvita/`. It has to be installed on the target PSVita.
+5. The VPK will be in `build/Unreal/`.
 
 ## Note
 
