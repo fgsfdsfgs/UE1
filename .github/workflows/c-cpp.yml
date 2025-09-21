@@ -114,11 +114,8 @@ jobs:
     steps:
       - name: Install host dependencies
         run: |
-          dpkg --add-architecture armhf
           apt-get -y update
-          apt-get -y install sudo git make cmake patch curl wget gcc-multilib g++-multilib
-          apt-get -y install crossbuild-essential-armhf
-          apt-get -y install libsdl2-dev libopenal-dev libxmp-dev libsdl2-dev:armhf libopenal-dev:armhf libxmp-dev:armhf
+          apt-get -y install sudo git make cmake patch curl wget
       - name: Set PATH
         run: echo "$VITASDK/bin" >> $GITHUB_PATH
       - name: Install VitaSDK and vdpm packages
@@ -132,7 +129,7 @@ jobs:
         run: |
           git clone --recursive https://github.com/Rinnegatamante/vitaGL
           pushd vitaGL
-          make HAVE_GLSL_SUPPORT=1 CIRCULAR_VERTEX_POOL=2 -j install
+          make HAVE_GLSL_SUPPORT=1 CIRCULAR_VERTEX_POOL=2 MATH_SPEEDHACK=1 INDICES_SPEEDHACK=1 PRIMITIVES_SPEEDHACK=1 -j install
           popd
       - name: Build and install SDL2
         run: |
@@ -142,31 +139,17 @@ jobs:
           cmake --build build -- -j
           cmake --install build
           popd
-      - name: Build and install vita-rtld
-        run: |
-          git clone https://github.com/fgsfdsfgs/vita-rtld
-          pushd vita-rtld
-          cmake -S. -Bbuild -DCMAKE_TOOLCHAIN_FILE=${VITASDK}/share/vita.toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-          cmake --build build -- -j
-          cmake --install build
-          popd
       - name: Checkout repository
         uses: actions/checkout@v4
       - name: Build Unreal
         run: |
-          cmake -G"Unix Makefiles" -DCMAKE_CROSSCOMPILING=ON -DCMAKE_C_COMPILER=arm-linux-gnueabihf-gcc-12 -DCMAKE_CXX_COMPILER=arm-linux-gnueabihf-g++-12 -Bbuild -DBUILD_FOR_PSVITA=ON Source
+          cmake -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${VITASDK}/share/vita.toolchain.cmake" -Bbuild -DCMAKE_BUILD_TYPE=RelWithDebInfo Source
           cmake --build build -j
-          cmake --install build
-      - name: Build PSVita loader
-        run: |
-          cmake -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE="${VITASDK}/share/vita.toolchain.cmake" -Bbuild_psvita -DCMAKE_BUILD_TYPE=RelWithDebInfo Source/PSVitaLoader
-          cmake --build build_psvita -j
       - name: Prepare artifact for packaging
         run: |
           mkdir -p bin/unreal/System
-          cp build/RelWithDebInfo/* bin/unreal/System/
           cp Engine/Config/*.ini bin/unreal/System/
-          cp build_psvita/UnrealLoader.vpk bin/unreal.vpk
+          cp build/Unreal/Unreal.vpk bin/unreal.vpk
           sed -i -e 's/ViewportX=800/ViewportX=960/g' -e 's/ViewportY=600/ViewportY=544/g' -e 's/StartupFullscreen=False/StartupFullscreen=True/g' bin/unreal/System/Default.ini
           sed -i -e 's/ViewportX=800/ViewportX=960/g' -e 's/ViewportY=600/ViewportY=544/g' -e 's/StartupFullscreen=False/StartupFullscreen=True/g' bin/unreal/System/Unreal.ini
       - name: Upload artifact
