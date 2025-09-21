@@ -16,12 +16,14 @@ Revision history:
 #else
 #include <unistd.h>
 #include <arpa/inet.h>
+#ifndef PLATFORM_PSVITA
 #include <net/if.h>
+#include <sys/ioctl.h>
+#endif
 #include <netdb.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/socket.h>
-#include <sys/ioctl.h>
 #endif
 
 #include <stdlib.h>

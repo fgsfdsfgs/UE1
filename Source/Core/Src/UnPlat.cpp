@@ -1600,7 +1600,7 @@ CORE_API const char* appPackage()
 	Callback for some platforms to call when the process is being suspended or resumed.
 -----------------------------------------------------------------------------*/
 
-extern "C" CORE_API void appHandleSuspendResume( UBOOL bIsSuspending )
+CORE_API void appHandleSuspendResume( UBOOL bIsSuspending )
 {
 	// When suspending, force-write all config changes.
 	if( GIsStarted && GSys && bIsSuspending )

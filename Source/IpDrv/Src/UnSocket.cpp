@@ -161,9 +161,11 @@ const char* SocketError( INT Code )
 		case EDQUOT:				return "EDQUOT";
 		case ESTALE:				return "ESTALE";
 		case EREMOTE:				return "EREMOTE";
+#ifndef PLATFORM_PSVITA
 		case HOST_NOT_FOUND:		return "HOST_NOT_FOUND";
 		case TRY_AGAIN:				return "TRY_AGAIN";
 		case NO_RECOVERY:			return "NO_RECOVERY";
+#endif
 		case 0:						return "NO_ERROR";
 		default:					return "Unknown";
 	}

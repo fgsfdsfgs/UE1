@@ -34,7 +34,12 @@ typedef char* LPSTR;
 #define WSAHOST_NOT_FOUND HOST_NOT_FOUND
 #define WSANO_DATA NO_ADDRESS
 #define closesocket close
+#ifdef PLATFORM_PSVITA
+// this is only used for FIONBIO
+#define ioctlsocket( fd, opt, arg ) setsockopt( (fd), SOL_SOCKET, SO_NONBLOCK, (const void*)(arg), sizeof(*(arg)) )
+#else
 #define ioctlsocket ioctl
+#endif
 #define WSAGetLastError() errno
 #define IPBYTE(A, N) ((BYTE*)&A.s_addr)[N-1]
 #endif

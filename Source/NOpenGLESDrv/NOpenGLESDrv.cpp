@@ -255,11 +255,11 @@ void UNOpenGLESRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Sc
 	else
 		ColorMod = FPlane( 0.f, 0.f, 0.f, 0.f );
 
-	if( AutoFOV && Viewport->Actor->DesiredFOV == 90.0f )
+	if( AutoFOV && Viewport && Viewport->Actor && Viewport->Actor->DesiredFOV == 90.0f )
 	{
-		FLOAT aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
-		FLOAT fov = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
-		Viewport->Actor->DesiredFOV = fov;
+		const FLOAT Aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
+		const FLOAT Fov = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( Aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
+		Viewport->Actor->DesiredFOV = Fov;
 	}
 
 	unguard;
@@ -572,7 +572,7 @@ GLuint UNOpenGLESRenderDevice::CompileShader( GLenum Type, const char* Text )
 	glGetShaderiv( Id, GL_COMPILE_STATUS, &Status );
 	if( !Status )
 	{
-		char Tmp[2048];
+		char Tmp[2048] = { 0 };
 		glGetShaderInfoLog( Id, sizeof(Tmp), NULL, Tmp );
 		appErrorf( "%s shader compilation failed:\n%s", ( Type == GL_FRAGMENT_SHADER ) ? "Fragment" : "Vertex", Tmp );
 	}
@@ -660,7 +660,7 @@ UNOpenGLESRenderDevice::FCachedShader* UNOpenGLESRenderDevice::CreateShader( DWO
 	glGetProgramiv( Prog, GL_LINK_STATUS, &Status );
 	if( !Status )
 	{
-		char Tmp[2048];
+		char Tmp[2048] = { 0 };
 		glGetProgramInfoLog( Prog, sizeof(Tmp), NULL, Tmp );
 		appErrorf( "Failed to link shader %08x:\n%s", ShaderFlags, Tmp );
 	}

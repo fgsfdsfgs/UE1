@@ -2,6 +2,11 @@
 #ifdef PLATFORM_WIN32
 #include <windows.h>
 #endif
+#ifdef PLATFORM_PSVITA
+#include <vitasdk.h>
+#include <vitaGL.h>
+#include <unistd.h>
+#endif
 
 #include "Engine.h"
 
@@ -21,6 +26,115 @@ class FExecHook : public FExec
 
 FExecHook GLocalHook;
 DLL_EXPORT FExec* GThisExecHook = &GLocalHook;
+
+#ifdef PLATFORM_PSVITA
+
+//
+// PSVita-specific globals.
+//
+
+#define MAX_PATH 1024
+#define SYSTEM_PATH "data/unreal/System/"
+
+// 200MB libc heap, 512K main thread stack, 16MB for loading game DLLs
+// the rest goes to vitaGL
+extern "C" { SceUInt32 sceUserMainThreadStackSize = 512 * 1024; }
+extern "C" { unsigned int _pthread_stack_default_user = 512 * 1024; }
+extern "C" { unsigned int _newlib_heap_size_user = 200 * 1024 * 1024; }
+#define VGL_MEM_THRESHOLD ( 16 * 1024 * 1024 )
+
+static char GRootPath[MAX_PATH] = "app0:/";
+
+//
+// PSVita-specific functions.
+//
+
+static bool FindRootPath( char* Out, int OutLen )
+{
+	static const char *Drives[] = { "uma0", "imc0", "ux0" };
+
+	// check if an unreal folder exists on one of the drives
+	// default to the last one (ux0)
+	for ( unsigned int i = 0; i < sizeof(Drives) / sizeof(*Drives); ++i )
+	{
+		snprintf( Out, OutLen, "%s:/" SYSTEM_PATH, Drives[i] );
+		SceUID Dir = sceIoDopen( Out );
+		if ( Dir >= 0 )
+		{
+			sceIoDclose( Dir );
+			return true;
+		}
+	}
+
+	// not found
+	return false;
+}
+
+static INT PowerCallback( INT NotifyID, INT NotifyCnt, INT PowerInfo, void* Common )
+{
+	if ( PowerInfo & ( SCE_POWER_CB_APP_RESUME | SCE_POWER_CB_APP_RESUMING ) )
+	{
+		debugf( "PowerCallback: resuming..." );
+		appHandleSuspendResume( false );
+	}
+	else if ( PowerInfo & ( SCE_POWER_CB_BUTTON_PS_PRESS | SCE_POWER_CB_APP_SUSPEND | SCE_POWER_CB_SYSTEM_SUSPEND ) )
+	{
+		debugf( "PowerCallback: suspending..." );
+		appHandleSuspendResume( true );
+	}
+
+	return 0;
+}
+
+static INT CallbackThread( DWORD Argc, void* Argv )
+{
+	const INT CbID = sceKernelCreateCallback( "Power Callback", 0, PowerCallback, nullptr );
+	scePowerRegisterCallback( CbID );
+	while( true )
+		sceKernelDelayThreadCB( 10000000 );
+	return 0;
+}
+
+[[noreturn]] static void EarlyError( const char* Msg )
+{
+	fprintf( stderr, "FATAL ERROR: %s\n", Msg );
+	SDL_ShowSimpleMessageBox( SDL_MESSAGEBOX_ERROR, "Fatal Error", Msg, nullptr );
+	sceKernelExitProcess( 0 );
+	abort();
+}
+
+static void PlatformPreInit()
+{
+	sceTouchSetSamplingState( SCE_TOUCH_PORT_BACK, SCE_TOUCH_SAMPLING_STATE_STOP );
+	scePowerSetArmClockFrequency( 444 );
+	scePowerSetBusClockFrequency( 222 );
+	scePowerSetGpuClockFrequency( 222 );
+	scePowerSetGpuXbarClockFrequency( 166 );
+	sceSysmoduleLoadModule( SCE_SYSMODULE_NET );
+
+	if ( !FindRootPath( GRootPath, sizeof(GRootPath) ) )
+		EarlyError( "Could not find Unreal directory" );
+
+	if ( chdir( GRootPath ) < 0 )
+		EarlyError( "Could not chdir to Unreal directory" );
+
+	SceUID Th = sceKernelCreateThread( "CallbackThread", CallbackThread, 0x10000100, 0x10000, 0, 0, nullptr );
+	if( Th >= 0 )
+		sceKernelStartThread( Th, 0, nullptr );
+
+	vglInitWithCustomThreshold( 0, 960, 544, VGL_MEM_THRESHOLD, 0, 0, 0, SCE_GXM_MULTISAMPLE_2X );
+	vglSetSemanticBindingMode( VGL_MODE_POSTPONED );
+}
+
+#else
+
+void PlatformPreInit()
+{
+
+}
+
+#endif
+
 
 //
 // Handle an error.
@@ -140,6 +254,7 @@ int main( int argc, const char** argv )
 	hInstance = NULL;
 	// Remember arguments since we don't have GetCommandLine().
 	appSetCmdLine( argc, argv );
+	PlatformPreInit();
 #endif
 
 	GIsStarted = 1;

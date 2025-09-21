@@ -14,6 +14,10 @@
 
 #include "CorePrivate.h"
 
+#ifdef PLATFORM_PSVITA
+#define pthread_setname_np(t, n) do { } while(0)
+#endif
+
 CORE_API UTHREAD appThreadSpawn( THREAD_FUNC Func, void* Arg, const char* Name, UBOOL bDetach, DWORD* OutThreadId )
 {
 	guard(appThreadSpawn);

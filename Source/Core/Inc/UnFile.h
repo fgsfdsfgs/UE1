@@ -56,6 +56,7 @@ CORE_API UBOOL appMoveFile( const char* Src, const char* Dest );
 CORE_API UBOOL appCopyFile( const char* Src, const char* Dest );
 CORE_API void appCleanFileCache();
 CORE_API UBOOL appFindPackageFile( const char* In, const FGuid* Guid, char* Out );
+CORE_API void appHandleSuspendResume( UBOOL bIsSuspending );
 
 /*-----------------------------------------------------------------------------
 	Config.
