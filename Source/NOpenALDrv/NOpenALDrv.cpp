@@ -159,6 +159,12 @@ void UNOpenALAudioSubsystem::Destroy()
 		MusicCtx = NULL;
 	}
 
+	if (UseReverb)
+	{
+		alDeleteAuxiliaryEffectSlots(1, &ReverbSlot);
+		alDeleteEffects(1, &ReverbEffect);
+	}
+
 	if( Ctx )
 	{
 		// If we have a context, we probably have everything else. Kill it.
@@ -200,6 +206,11 @@ void UNOpenALAudioSubsystem::ShutdownAfterError()
 		xmp_free_context( MusicCtx );
 		MusicCtx = NULL;
 		Music = NULL;
+	}
+	if (UseReverb)
+	{
+		alDeleteAuxiliaryEffectSlots(1, &ReverbSlot);
+		alDeleteEffects(1, &ReverbEffect);
 	}
 	if( Ctx )
 	{
@@ -569,6 +580,8 @@ void UNOpenALAudioSubsystem::PlayMusic()
 
 	FScopedLock Lock( MusicMutex );
 
+	alSourceStop(MusicSource);
+	ClearMusicBuffers();
 	xmp_set_position( MusicCtx, MusicSection );
 
 	ALint State = 0;
