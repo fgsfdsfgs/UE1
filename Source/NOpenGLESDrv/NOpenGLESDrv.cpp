@@ -958,14 +958,32 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 			if( Masked )
 			{
 				// index 0 is transparent
+#if __INTEL__
 				for( DWORD i = 0; i < Count; ++i, ++Src )
 					*Dst++ = *Src ? ( Pal[*Src] | ALPHA_MASK ) : 0;
+#else
+				for( i = 0; i < Count; ++i, ++Src )
+				{
+					FColor Color = Palette[*Src];
+					Color.A = *Src ? 255 : 0;
+					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
+				}
+#endif
 			}
 			else
 			{
 				// index 0 is whatever
+#if __INTEL__
 				for( DWORD i = 0; i < Count; ++i )
 					*Dst++ = ( Pal[*Src++] | ALPHA_MASK );
+#else
+				for( DWORD i = 0; i < Count; ++i, ++Src )
+				{
+					FColor Color = Palette[*Src];
+					Color.A = 255;
+					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
+				}
+#endif
 			}
 		}
 		else if( UseBGRA )
