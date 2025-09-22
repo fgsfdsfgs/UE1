@@ -27,11 +27,11 @@ public:
 	{
 		struct
 		{
-#if __INTEL__
+//#if __INTEL__
 			BYTE R,G,B,A;
-#else
-			BYTE A,B,G,R;
-#endif
+//#else
+//			BYTE A,B,G,R;
+//#endif
 		};
 		struct
 		{
