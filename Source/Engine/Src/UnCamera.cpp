@@ -420,21 +420,21 @@ UBOOL UViewport::Exec( const char* Cmd, FOutputDevice* Out )
 				#pragma pack (pop)
 
 				// File header.
-				FH.bfType		= 'B' + 256*'M';
-				FH.bfSize		= sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + 3 * SizeX * SizeY;
+				FH.bfType		= INTEL_ORDER16((_WORD)('B' + 256*'M'));
+				FH.bfSize		= INTEL_ORDER32((DWORD)(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + 3 * SizeX * SizeY));
 				FH.bfReserved1	= 0;
 				FH.bfReserved2	= 0;
-				FH.bfOffBits	= sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER);
+				FH.bfOffBits	= INTEL_ORDER32((DWORD)(sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER)));
 				appFwrite( &FH, sizeof(FH), 1, F );
 
 				// Info header.
-				IH.biSize			= sizeof(BITMAPINFOHEADER);
-				IH.biWidth			= SizeX;
-				IH.biHeight			= SizeY;
-				IH.biPlanes			= 1;
-				IH.biBitCount		= 24;
+				IH.biSize			= INTEL_ORDER32((DWORD)sizeof(BITMAPINFOHEADER));
+				IH.biWidth			= INTEL_ORDER32(SizeX);
+				IH.biHeight			= INTEL_ORDER32(SizeY);
+				IH.biPlanes			= INTEL_ORDER16((_WORD)1);
+				IH.biBitCount		= INTEL_ORDER16((_WORD)24);
 				IH.biCompression	= 0; //BI_RGB
-				IH.biSizeImage		= SizeX * SizeY * 3;
+				IH.biSizeImage		= INTEL_ORDER32((DWORD)(SizeX * SizeY * 3));
 				IH.biXPelsPerMeter	= 0;
 				IH.biYPelsPerMeter	= 0;
 				IH.biClrUsed		= 0;
