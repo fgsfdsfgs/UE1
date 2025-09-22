@@ -487,6 +487,7 @@ void appInit()
 	GProcessorCount = SDL_GetCPUCount();
 #endif // PLATFORM_
 
+#if __INTEL__
 	// Check processor version with CPUID.
 	DWORD A=0, B=0, C=0, D=0;
 	FGlobalPlatform_CPUID(0,&A,&B,&C,&D);
@@ -544,6 +545,7 @@ void appInit()
 	// Print feature.
 	debugf( NAME_Init, "CPU Detected: %s (%s)", Model, Brand );
 	debugf( NAME_Init, "CPU Features: %s", FeatStr );
+#endif
 
 	// FPU.
 	appEnableFastMath( 0 );
