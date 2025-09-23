@@ -7,9 +7,7 @@
 ----------------------------------------------------------------------------*/
 
 #ifdef PLATFORM_WIN32
-	#define __WIN32__	1
-#else
-	#define __WIN32__	0
+#define __WIN32__	1
 #endif
 
 #ifndef PLATFORM_BIG_ENDIAN
