@@ -119,7 +119,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 	WaveDataEnd = &WavData(0) + WavData.Num();	
 	
 	// Verify we've got a real 'WAVE' header.
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 	if( RiffHdr->wID != ( mmioFOURCC('W','A','V','E') )  )
 		return 0;
 #else
@@ -150,7 +150,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 	// Chunk found ?
 	if( INTEL_ORDER32(RiffChunk->ChunkID) != mmioFOURCC('f','m','t',' ') )
 	{
-#if !__INTEL__  // swap them back just in case.
+#if !__INTEL_BYTE_ORDER__  // swap them back just in case.
 		if (!alreadySwapped)
 		{
 			RiffHdr->rID = INTEL_ORDER32(RiffHdr->rID);
@@ -163,7 +163,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 
 	FmtChunk = (FFormatChunk*)((BYTE*)RiffChunk + 8);
 
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 	if (!alreadySwapped)
 	{
 		FmtChunk->wFormatTag = INTEL_ORDER16(FmtChunk->wFormatTag);
@@ -192,7 +192,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 	// Chunk found ?
 	if( INTEL_ORDER32(RiffChunk->ChunkID) != mmioFOURCC('d','a','t','a') )
 	{
-#if !__INTEL__  // swap them back just in case.
+#if !__INTEL_BYTE_ORDER__  // swap them back just in case.
 		if (!alreadySwapped)
 		{
 			RiffHdr->rID = INTEL_ORDER32(RiffHdr->rID);
@@ -209,7 +209,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 		return 0;
 	}
 
-#if !__INTEL__  // swap them back just in case.
+#if !__INTEL_BYTE_ORDER__  // swap them back just in case.
 	if (alreadySwapped) // swap back into Intel order for chunk search...
 		RiffChunk->ChunkLen = INTEL_ORDER32(RiffChunk->ChunkLen);
 #endif
@@ -222,7 +222,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 
 	NewDataSize	= SampleDataSize;
 
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 	if (!alreadySwapped)
 	{
 		if (FmtChunk->wBitsPerSample == 16)
@@ -256,7 +256,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 	if( (BYTE*)RiffChunk+8<WaveDataEnd && INTEL_ORDER32(RiffChunk->ChunkID) == mmioFOURCC('s','m','p','l') )
 	{
 		FSampleChunk* pSampleChunk =  (FSampleChunk*)( (BYTE*)RiffChunk + 8);
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 		if (!alreadySwapped)
 		{
 			pSampleChunk->dwManufacturer = INTEL_ORDER32(pSampleChunk->dwManufacturer);
@@ -273,7 +273,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 		SampleLoopsNum  = pSampleChunk->cSampleLoops; // Number of tSampleLoop structures.
 		// First tSampleLoop structure starts right after the tSampleChunk.
 		pSampleLoop = (FSampleLoop*) ((BYTE*)pSampleChunk + sizeof(FSampleChunk)); 
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 		if (SampleLoopsNum > 0 && !alreadySwapped)
 		{
 			pSampleLoop->dwIdentifier = INTEL_ORDER32(pSampleLoop->dwIdentifier);
@@ -286,7 +286,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 #endif
 	}
 	// Couldn't byte swap this before, since it'd throw off the chunk search.
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 	*pWaveDataSize = INTEL_ORDER32(*pWaveDataSize);
 #endif
 		

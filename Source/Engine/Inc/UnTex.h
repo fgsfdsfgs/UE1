@@ -27,7 +27,7 @@ public:
 	{
 		struct
 		{
-//#if __INTEL__
+//#if __INTEL_BYTE_ORDER__
 			BYTE R,G,B,A;
 //#else
 //			BYTE A,B,G,R;

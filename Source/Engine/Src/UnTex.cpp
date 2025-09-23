@@ -298,7 +298,7 @@ void UTexture::Serialize( FArchive& Ar )
 		VBits = FLogTwo(VSize);
 	}
 
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 	// PolyFlags isn't a proper bitfield, so the bits have to be reversed
 	if ( /*Ar.IsSaving() ||*/ Ar.IsLoading())
 	{

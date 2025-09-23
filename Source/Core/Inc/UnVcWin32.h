@@ -9,6 +9,7 @@
 
 #define __WIN32__	1
 #define __INTEL__	1
+#define __INTEL_BYTE_ORDER__ 1
 #include <stdarg.h>
 /*----------------------------------------------------------------------------
 	Platform specifics types and defines.

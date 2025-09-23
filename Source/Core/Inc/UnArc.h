@@ -29,7 +29,7 @@ public:
 	// Hardcoded datatype routines that may not be overridden.
 	FArchive& ByteOrderSerialize( void* V, INT Length )
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		Serialize( V, Length );
 #else
 		if( ArIsLoading || ArIsSaving || ArIsNet )

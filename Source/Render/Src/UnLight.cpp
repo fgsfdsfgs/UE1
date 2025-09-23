@@ -507,7 +507,7 @@ void FLightManager::ShadowMapGen( FTextureInfo& Tex, BYTE* SrcBits, BYTE* Dest1 
 		if( V == 0            ) Dests[0] -= Size4;
 		if( V == Tex.VClamp-2 ) Dests[2] -= Size4;
 	}
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 	Size4 = (ShadowMaskSpace*8)/4;
 	DWORD* DestDW = (DWORD*)Dest1;
 	for( INT i=0; i<Size4; i++ )

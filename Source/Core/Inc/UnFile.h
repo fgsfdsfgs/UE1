@@ -16,7 +16,7 @@ CORE_API extern DWORD GCRCTable[];
 ----------------------------------------------------------------------------*/
 
 // Bitfields.
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 	#define NEXT_BITFIELD(b) ((b)<<1)
 	#define FIRST_BITFIELD   (1)
 #else
@@ -24,7 +24,7 @@ CORE_API extern DWORD GCRCTable[];
 	#define FIRST_BITFIELD   (0x80000000)
 #endif
 
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 	#define INTEL_ORDER16(x)   (x)
 	#define INTEL_ORDER32(x)   (x)
 #else

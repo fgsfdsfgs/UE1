@@ -299,7 +299,7 @@ void UObject::execBoolVariable( FFrame& Stack, BYTE*& Result )
 	(this->*GIntrinsics[B])( Stack, *(BYTE**)&GBoolAddr );
 	GProperty = Property;
 
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 	DWORD OldPropValue = *GBoolAddr;
 	if (*GBoolAddr == 0x00000001 && ((UBoolProperty*)GProperty)->BitMask == FIRST_BITFIELD)
 		*GBoolAddr = FIRST_BITFIELD;
@@ -310,7 +310,7 @@ void UObject::execBoolVariable( FFrame& Stack, BYTE*& Result )
 	if( Result )
 		*(DWORD*)Result = (*GBoolAddr & ((UBoolProperty*)GProperty)->BitMask) ? 1 : 0;
 
-#if !__INTEL__
+#if !__INTEL_BYTE_ORDER__
 	*GBoolAddr = OldPropValue;
 #endif
 
