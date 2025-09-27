@@ -7,10 +7,16 @@
 	Platform compiler definitions.
 ----------------------------------------------------------------------------*/
 
-#define __WIN32__	1
-#define __INTEL__	1
+#ifndef PLATFORM_X86
+#error "VC++ is only supported for x86 targets."
+#endif
+
+#define __WIN32__ 1
+#define __INTEL__ 1
 #define __INTEL_BYTE_ORDER__ 1
+
 #include <stdarg.h>
+
 /*----------------------------------------------------------------------------
 	Platform specifics types and defines.
 ----------------------------------------------------------------------------*/
@@ -156,6 +162,10 @@ typedef struct _iobuf FILE;
 	extern "C" {HINSTANCE hInstance;} \
 	INT __declspec(dllexport) __stdcall DllMain( HINSTANCE hInInstance, DWORD Reason, void* Reserved ) \
 	{ hInstance = hInInstance; return 1; }
+
+// Byte-swapping macros. VC++ targets are always LE.
+#define INTEL_ORDER16(x) (x)
+#define INTEL_ORDER32(x) (x)
 
 /*----------------------------------------------------------------------------
 	Functions.

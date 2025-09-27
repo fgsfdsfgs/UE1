@@ -512,7 +512,7 @@ void FLightManager::ShadowMapGen( FTextureInfo& Tex, BYTE* SrcBits, BYTE* Dest1 
 	DWORD* DestDW = (DWORD*)Dest1;
 	for( INT i=0; i<Size4; i++ )
 	{
-		DestDW[i] = INTEL_ORDER32(DestDW[i]);
+		DestDW[i] = LittleEndian( DestDW[i] );
 	}
 #endif
 	unguardSlow;

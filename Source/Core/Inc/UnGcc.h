@@ -213,6 +213,15 @@ char* appUnixPath( const char* Path );
 #define _strnicmp(x, y, n) strncasecmp((x), (y), (n))
 #endif
 
+// Byte-swapping macros.
+#if __INTEL_BYTE_ORDER__
+	#define INTEL_ORDER16(x) (x)
+	#define INTEL_ORDER32(x) (x)
+#else
+	#define INTEL_ORDER16(x) __builtin_bswap16(x)
+	#define INTEL_ORDER32(x) __builtin_bswap32(x)
+#endif
+
 /*----------------------------------------------------------------------------
 	Functions.
 ----------------------------------------------------------------------------*/

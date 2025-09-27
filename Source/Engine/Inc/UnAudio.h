@@ -216,6 +216,12 @@ public:
 
 	// Filters.
 	void NoiseGateFilter(); 
+
+#if !__INTEL_BYTE_ORDER__
+private:
+	// Byte-swaps the wave headers and sample data.
+	void ByteSwapWave( TArray<BYTE>& WavData );
+#endif
 };
 
 /*-----------------------------------------------------------------------------

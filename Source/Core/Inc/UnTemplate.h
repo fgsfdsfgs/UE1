@@ -50,6 +50,35 @@ template< class T > T Lerp( T& A, T& B, FLOAT Alpha )
 }
 
 /*----------------------------------------------------------------------------
+	Byte-swapping and endianness.
+----------------------------------------------------------------------------*/
+
+inline _WORD LittleEndian( const _WORD Val )
+{
+	return INTEL_ORDER16( Val );
+}
+
+inline SWORD LittleEndian( const SWORD Val )
+{
+	return INTEL_ORDER16( Val );
+}
+
+inline DWORD LittleEndian( const DWORD Val )
+{
+	return INTEL_ORDER32( Val );
+}
+
+inline INT LittleEndian( const INT Val )
+{
+	return INTEL_ORDER32( Val );
+}
+
+template< class T > void LittleEndianRef( T& Val )
+{
+	Val = LittleEndian( Val );
+}
+
+/*----------------------------------------------------------------------------
 	Standard macros.
 ----------------------------------------------------------------------------*/
 

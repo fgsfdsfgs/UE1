@@ -107,6 +107,126 @@ IMPLEMENT_CLASS(USound);
 /*-----------------------------------------------------------------------------
 	WaveModInfo implementation - downsampling of wave files.
 -----------------------------------------------------------------------------*/
+
+#if !__INTEL_BYTE_ORDER__
+
+//
+//	Helpers for the below function.
+//
+static inline void ByteSwapChunk( FFormatChunk* Chunk )
+{
+	LittleEndianRef( Chunk->wFormatTag );
+	LittleEndianRef( Chunk->nChannels );
+	LittleEndianRef( Chunk->nSamplesPerSec );
+	LittleEndianRef( Chunk->nAvgBytesPerSec );
+	LittleEndianRef( Chunk->nBlockAlign );
+	LittleEndianRef( Chunk->wBitsPerSample );
+	LittleEndianRef( Chunk->cbSize );
+}
+
+static inline void ByteSwapChunk( FSampleChunk* Chunk )
+{
+	LittleEndianRef( Chunk->dwSamplePeriod );
+	LittleEndianRef( Chunk->dwMIDIUnityNote );
+	LittleEndianRef( Chunk->dwMIDIPitchFraction );
+	LittleEndianRef( Chunk->dwSMPTEFormat );
+	LittleEndianRef( Chunk->dwSMPTEOffset );
+	LittleEndianRef( Chunk->cSampleLoops );
+	LittleEndianRef( Chunk->cbSamplerData );
+
+	// Swap all the FSampleLoop structs that begin right after this chunk header.
+	FSampleLoop* Loop = (FSampleLoop*) ((BYTE*)Chunk + sizeof(FSampleChunk));
+	for( INT i = 0; i < Chunk->cSampleLoops; ++i, ++Loop )
+	{
+		LittleEndianRef( Loop->dwIdentifier );
+		LittleEndianRef( Loop->dwType );
+		LittleEndianRef( Loop->dwStart );
+		LittleEndianRef( Loop->dwEnd );
+		LittleEndianRef( Loop->dwFraction );
+		LittleEndianRef( Loop->dwPlayCount );
+	}
+}
+
+//
+//	Swaps fields in one wave chunk.
+//
+static inline void ByteSwapChunk( FRiffChunk* RiffChunk )
+{
+	// These will be filled in as we go through the chunks.
+	BYTE* Samples = nullptr;
+	BYTE* SamplesEnd = nullptr;
+	_WORD wBitsPerSample = 0;
+
+	// Swap common chunk fields.
+	LittleEndianRef( RiffChunk->ChunkID );
+	LittleEndianRef( RiffChunk->ChunkLen );
+
+	// Swap specific chunks that we will need.
+	switch( RiffChunk->ChunkID )
+	{
+		case mmioFOURCC('f','m','t',' '):
+		{
+			FFormatChunk* FmtChunk = (FFormatChunk*)((BYTE*)RiffChunk + 8);
+			ByteSwapChunk( FmtChunk );
+			wBitsPerSample = FmtChunk->wBitsPerSample;
+			break;
+		}
+		case mmioFOURCC('d','a','t','a'):
+		{
+			Samples = (BYTE*)RiffChunk + 8;
+			SamplesEnd = Samples + RiffChunk->ChunkLen;
+			break;
+		}
+		case mmioFOURCC('s','m','p','l'):
+		{
+			FSampleChunk* SmplChunk = (FSampleChunk*)((BYTE*)RiffChunk + 8);
+			ByteSwapChunk( SmplChunk );
+			break;
+		}
+		default:
+			break;
+	}
+
+	// If we found the data chunk, swap the samples.
+	if( Samples )
+	{
+		if( wBitsPerSample == 16 )
+		{
+			for( _WORD *i = (_WORD*)Samples; i < (_WORD*)SamplesEnd; i++ )
+				*i = LittleEndian( *i );
+		}
+		else if( wBitsPerSample == 32 )
+		{
+			for( DWORD *i = (DWORD*)Samples; i < (DWORD*)SamplesEnd; i++ )
+				*i = LittleEndian( *i );
+		}
+	}
+}
+
+//
+//	Byte-swap wave file headers.
+//	Assumes WaveDataEnd is already set.
+//	Does nothing on LE platforms.
+//
+void FWaveModInfo::ByteSwapWave( TArray<BYTE>& WavData )
+{
+	// Swap header fields.
+	FRiffWaveHeader* RiffHdr = (FRiffWaveHeader*)&WavData(0);
+	LittleEndianRef( RiffHdr->rID );
+	LittleEndianRef( RiffHdr->ChunkLen );
+	LittleEndianRef( RiffHdr->wID );
+	// Swap all the chunks we're going to use.
+	FRiffChunk* RiffChunk = (FRiffChunk*)&WavData(3*4);
+	while( ((BYTE*)RiffChunk + 8) < WaveDataEnd )
+	{
+		ByteSwapChunk( RiffChunk );
+		// Go to next chunk.
+		RiffChunk = (FRiffChunk*) ( (BYTE*)RiffChunk + Pad16Bit(RiffChunk->ChunkLen) + 8); 
+	}
+}
+
+#endif // !__INTEL_BYTE_ORDER__
+
 //
 //	Figure out the WAVE file layout.
 //
@@ -123,58 +243,29 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 	if( RiffHdr->wID != ( mmioFOURCC('W','A','V','E') )  )
 		return 0;
 #else
-	if ( (RiffHdr->wID != (mmioFOURCC('W','A','V','E'))) &&
-		 (RiffHdr->wID != (mmioFOURCC('E','V','A','W'))) )
+	if( RiffHdr->wID == ( mmioFOURCC('E','V','A','W') ) )
 	{
+		// Little-endian WAV file, swap it.
+		ByteSwapWave( WavData );
+	}
+	if( RiffHdr->wID != ( mmioFOURCC('W','A','V','E') ) )
 		return 0;
-	}
-
-	bool alreadySwapped = (RiffHdr->wID == (mmioFOURCC('W','A','V','E')));
-	if (!alreadySwapped)
-	{
-		RiffHdr->rID = INTEL_ORDER32(RiffHdr->rID);
-		RiffHdr->ChunkLen = INTEL_ORDER32(RiffHdr->ChunkLen);
-		RiffHdr->wID = INTEL_ORDER32(RiffHdr->wID);
-	}
 #endif
 
 	pMasterSize = &RiffHdr->ChunkLen;
 
 	FRiffChunk* RiffChunk = (FRiffChunk*)&WavData(3*4);
 	// Look for the 'fmt ' chunk.
-	while( ( ((BYTE*)RiffChunk + 8) < WaveDataEnd)  && ( INTEL_ORDER32(RiffChunk->ChunkID) != mmioFOURCC('f','m','t',' ') ) )
+	while( ( ((BYTE*)RiffChunk + 8) < WaveDataEnd)  && ( RiffChunk->ChunkID != mmioFOURCC('f','m','t',' ') ) )
 	{
 		// Go to next chunk.
-		RiffChunk = (FRiffChunk*) ( (BYTE*)RiffChunk + Pad16Bit(INTEL_ORDER32(RiffChunk->ChunkLen)) + 8); 
+		RiffChunk = (FRiffChunk*) ( (BYTE*)RiffChunk + Pad16Bit(RiffChunk->ChunkLen) + 8); 
 	}
 	// Chunk found ?
-	if( INTEL_ORDER32(RiffChunk->ChunkID) != mmioFOURCC('f','m','t',' ') )
-	{
-#if !__INTEL_BYTE_ORDER__  // swap them back just in case.
-		if (!alreadySwapped)
-		{
-			RiffHdr->rID = INTEL_ORDER32(RiffHdr->rID);
-			RiffHdr->ChunkLen = INTEL_ORDER32(RiffHdr->ChunkLen);
-			RiffHdr->wID = INTEL_ORDER32(RiffHdr->wID);
-		}
-#endif
+	if( RiffChunk->ChunkID != mmioFOURCC('f','m','t',' ') )
 		return 0;
-	}
 
 	FmtChunk = (FFormatChunk*)((BYTE*)RiffChunk + 8);
-
-#if !__INTEL_BYTE_ORDER__
-	if (!alreadySwapped)
-	{
-		FmtChunk->wFormatTag = INTEL_ORDER16(FmtChunk->wFormatTag);
-		FmtChunk->nChannels = INTEL_ORDER16(FmtChunk->nChannels);
-		FmtChunk->nSamplesPerSec = INTEL_ORDER32(FmtChunk->nSamplesPerSec);
-		FmtChunk->nAvgBytesPerSec = INTEL_ORDER32(FmtChunk->nAvgBytesPerSec);
-		FmtChunk->nBlockAlign = INTEL_ORDER16(FmtChunk->nBlockAlign);
-		FmtChunk->wBitsPerSample = INTEL_ORDER16(FmtChunk->wBitsPerSample);
-	}
-#endif
-
 	pBitsPerSample  = &FmtChunk->wBitsPerSample;
 	pSamplesPerSec  = &FmtChunk->nSamplesPerSec;
 	pAvgBytesPerSec = &FmtChunk->nAvgBytesPerSec;
@@ -184,111 +275,41 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 	// re-initalize the RiffChunk pointer
 	RiffChunk = (FRiffChunk*)&WavData(3*4);
 	// Look for the 'data' chunk.
-	while( ( ((BYTE*)RiffChunk + 8) < WaveDataEnd) && ( INTEL_ORDER32(RiffChunk->ChunkID) != mmioFOURCC('d','a','t','a') ) )
+	while( ( ((BYTE*)RiffChunk + 8) < WaveDataEnd) && ( RiffChunk->ChunkID != mmioFOURCC('d','a','t','a') ) )
 	{
 		// Go to next chunk.
-		RiffChunk = (FRiffChunk*) ( (BYTE*)RiffChunk + Pad16Bit(INTEL_ORDER32(RiffChunk->ChunkLen)) + 8); 
+		RiffChunk = (FRiffChunk*) ( (BYTE*)RiffChunk + Pad16Bit(RiffChunk->ChunkLen) + 8); 
 	} 
 	// Chunk found ?
-	if( INTEL_ORDER32(RiffChunk->ChunkID) != mmioFOURCC('d','a','t','a') )
-	{
-#if !__INTEL_BYTE_ORDER__  // swap them back just in case.
-		if (!alreadySwapped)
-		{
-			RiffHdr->rID = INTEL_ORDER32(RiffHdr->rID);
-			RiffHdr->ChunkLen = INTEL_ORDER32(RiffHdr->ChunkLen);
-			RiffHdr->wID = INTEL_ORDER32(RiffHdr->wID);
-			FmtChunk->wFormatTag = INTEL_ORDER16(FmtChunk->wFormatTag);
-			FmtChunk->nChannels = INTEL_ORDER16(FmtChunk->nChannels);
-			FmtChunk->nSamplesPerSec = INTEL_ORDER32(FmtChunk->nSamplesPerSec);
-			FmtChunk->nAvgBytesPerSec = INTEL_ORDER32(FmtChunk->nAvgBytesPerSec);
-			FmtChunk->nBlockAlign = INTEL_ORDER16(FmtChunk->nBlockAlign);
-			FmtChunk->wBitsPerSample = INTEL_ORDER16(FmtChunk->wBitsPerSample);
-		}
-#endif
+	if( RiffChunk->ChunkID != mmioFOURCC('d','a','t','a') )
 		return 0;
-	}
-
-#if !__INTEL_BYTE_ORDER__  // swap them back just in case.
-	if (alreadySwapped) // swap back into Intel order for chunk search...
-		RiffChunk->ChunkLen = INTEL_ORDER32(RiffChunk->ChunkLen);
-#endif
 
 	SampleDataStart = (BYTE*)RiffChunk + 8;
 	pWaveDataSize   = &RiffChunk->ChunkLen;
-	SampleDataSize  =  INTEL_ORDER32(RiffChunk->ChunkLen);
+	SampleDataSize  =  RiffChunk->ChunkLen;
 	OldBitsPerSample = FmtChunk->wBitsPerSample;
 	SampleDataEnd   =  SampleDataStart+SampleDataSize;
 
 	NewDataSize	= SampleDataSize;
 
-#if !__INTEL_BYTE_ORDER__
-	if (!alreadySwapped)
-	{
-		if (FmtChunk->wBitsPerSample == 16)
-		{
-			for (_WORD *i = (_WORD *) SampleDataStart; i < (_WORD *) SampleDataEnd; i++)
-			{
-				*i = INTEL_ORDER16(*i);
-			}
-		}
-		else if (FmtChunk->wBitsPerSample == 32)
-		{
-			for (DWORD *i = (DWORD *) SampleDataStart; i < (DWORD *) SampleDataEnd; i++)
-			{
-				*i = INTEL_ORDER32(*i);
-			}
-		}
-	}
-#endif
-
 	// Re-initalize the RiffChunk pointer
 	RiffChunk = (FRiffChunk*)&WavData(3*4);
 	// Look for a 'smpl' chunk.
-	while( ( (((BYTE*)RiffChunk) + 8) < WaveDataEnd) && ( INTEL_ORDER32(RiffChunk->ChunkID) != mmioFOURCC('s','m','p','l') ) )
+	while( ( (((BYTE*)RiffChunk) + 8) < WaveDataEnd) && ( RiffChunk->ChunkID != mmioFOURCC('s','m','p','l') ) )
 	{
 		// Go to next chunk.
-		RiffChunk = (FRiffChunk*) ( (BYTE*)RiffChunk + Pad16Bit(INTEL_ORDER32(RiffChunk->ChunkLen)) + 8); 
+		RiffChunk = (FRiffChunk*) ( (BYTE*)RiffChunk + Pad16Bit(RiffChunk->ChunkLen) + 8); 
 	} 
 
 	// Chunk found ? smpl chunk is optional.
 	// Find the first sample-loop structure, and the total number of them.
-	if( (BYTE*)RiffChunk+8<WaveDataEnd && INTEL_ORDER32(RiffChunk->ChunkID) == mmioFOURCC('s','m','p','l') )
+	if( (BYTE*)RiffChunk+4<WaveDataEnd && RiffChunk->ChunkID == mmioFOURCC('s','m','p','l') )
 	{
 		FSampleChunk* pSampleChunk =  (FSampleChunk*)( (BYTE*)RiffChunk + 8);
-#if !__INTEL_BYTE_ORDER__
-		if (!alreadySwapped)
-		{
-			pSampleChunk->dwManufacturer = INTEL_ORDER32(pSampleChunk->dwManufacturer);
-			pSampleChunk->dwProduct = INTEL_ORDER32(pSampleChunk->dwProduct);
-			pSampleChunk->dwSamplePeriod = INTEL_ORDER32(pSampleChunk->dwSamplePeriod);
-			pSampleChunk->dwMIDIUnityNote = INTEL_ORDER32(pSampleChunk->dwMIDIUnityNote);
-			pSampleChunk->dwMIDIPitchFraction = INTEL_ORDER32(pSampleChunk->dwMIDIPitchFraction);
-			pSampleChunk->dwSMPTEFormat = INTEL_ORDER32(pSampleChunk->dwSMPTEFormat);
-			pSampleChunk->dwSMPTEOffset = INTEL_ORDER32(pSampleChunk->dwSMPTEOffset);
-			pSampleChunk->cSampleLoops = INTEL_ORDER32(pSampleChunk->cSampleLoops);
-			pSampleChunk->cbSamplerData = INTEL_ORDER32(pSampleChunk->cbSamplerData);
-		}
-#endif
 		SampleLoopsNum  = pSampleChunk->cSampleLoops; // Number of tSampleLoop structures.
 		// First tSampleLoop structure starts right after the tSampleChunk.
 		pSampleLoop = (FSampleLoop*) ((BYTE*)pSampleChunk + sizeof(FSampleChunk)); 
-#if !__INTEL_BYTE_ORDER__
-		if (SampleLoopsNum > 0 && !alreadySwapped)
-		{
-			pSampleLoop->dwIdentifier = INTEL_ORDER32(pSampleLoop->dwIdentifier);
-			pSampleLoop->dwType = INTEL_ORDER32(pSampleLoop->dwType);
-			pSampleLoop->dwStart = INTEL_ORDER32(pSampleLoop->dwStart);
-			pSampleLoop->dwEnd = INTEL_ORDER32(pSampleLoop->dwEnd);
-			pSampleLoop->dwFraction = INTEL_ORDER32(pSampleLoop->dwFraction);
-			pSampleLoop->dwPlayCount = INTEL_ORDER32(pSampleLoop->dwPlayCount);
-		}
-#endif
 	}
-	// Couldn't byte swap this before, since it'd throw off the chunk search.
-#if !__INTEL_BYTE_ORDER__
-	*pWaveDataSize = INTEL_ORDER32(*pWaveDataSize);
-#endif
 		
 	return 1;
 	unguard;
