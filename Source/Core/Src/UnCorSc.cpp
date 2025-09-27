@@ -299,10 +299,20 @@ void UObject::execBoolVariable( FFrame& Stack, BYTE*& Result )
 	(this->*GIntrinsics[B])( Stack, *(BYTE**)&GBoolAddr );
 	GProperty = Property;
 
+#if !__INTEL_BYTE_ORDER__
+	DWORD OldPropValue = *GBoolAddr;
+	if (*GBoolAddr == 0x00000001 && ((UBoolProperty*)GProperty)->BitMask == FIRST_BITFIELD)
+		*GBoolAddr = FIRST_BITFIELD;
+#endif
+
 	// Note that we're not returning an in-place pointer to to the bool, so EX_Let 
 	// must take special precautions with bools.does
 	if( Result )
 		*(DWORD*)Result = (*GBoolAddr & ((UBoolProperty*)GProperty)->BitMask) ? 1 : 0;
+
+#if !__INTEL_BYTE_ORDER__
+	*GBoolAddr = OldPropValue;
+#endif
 
 	unguardexecSlow;
 }

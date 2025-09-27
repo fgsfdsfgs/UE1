@@ -16,7 +16,7 @@ struct FMeshVert
 	// Variables.
 	union
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		struct {INT X:11; INT Y:11; INT Z:10;};
 #else
 		struct {INT Z:10; INT Y:11; INT X:11;};

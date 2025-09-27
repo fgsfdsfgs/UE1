@@ -32,7 +32,7 @@ union FMMX
 {
 	struct
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		SWORD R, G, B, A;
 #else
 		SWORD A, B, G, R;
@@ -41,7 +41,7 @@ union FMMX
 
 	struct
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		BYTE R1, G1, B1, A1, R2, G2, B2, A2;
 #else
 		BYTE A2, B2, G2, R2, A1, B1, G1, R1;
@@ -50,7 +50,7 @@ union FMMX
 
 	struct
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		BYTE SB1, SG1, SR1, SA1, SR2, SG2, SB2, SA2;
 #else
 		BYTE SA2, SR2, SG2, SB2, SA1, SB1, SG1, SR1;
@@ -59,7 +59,7 @@ union FMMX
 
 	struct
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		INT IL, IH;
 #else
 		INT IH, IL;
@@ -67,7 +67,7 @@ union FMMX
 	};
 	struct
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		DWORD DL, DH;
 #else
 		DWORD DH, DL;
@@ -75,7 +75,7 @@ union FMMX
 	};
 	struct
 	{
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 		FLOAT FL, FH;
 #else
 		DWORD FH, FL;

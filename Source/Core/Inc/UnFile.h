@@ -16,12 +16,37 @@ CORE_API extern DWORD GCRCTable[];
 ----------------------------------------------------------------------------*/
 
 // Bitfields.
-#if __INTEL__
+#if __INTEL_BYTE_ORDER__
 	#define NEXT_BITFIELD(b) ((b)<<1)
 	#define FIRST_BITFIELD   (1)
 #else
 	#define NEXT_BITFIELD(b) ((b)>>1)
 	#define FIRST_BITFIELD   (0x80000000)
+#endif
+
+#if __INTEL_BYTE_ORDER__
+	#define INTEL_ORDER16(x)   (x)
+	#define INTEL_ORDER32(x)   (x)
+#else
+	static inline _WORD INTEL_ORDER16(_WORD val)
+	{
+		return ((((val)>>8)&0xff)+ (((val)<<8)&0xff00));
+	}
+
+	static inline SWORD INTEL_ORDER16(SWORD val)
+	{
+		return (SWORD)INTEL_ORDER16((_WORD)val);
+	}
+
+	static inline DWORD INTEL_ORDER32(DWORD val)
+	{
+		return (((val)>>24) + (((val)>>8)&0xff00) + (((val)<<8)&0xff0000) + ((val)<<24));
+	}
+
+	static inline INT INTEL_ORDER32(INT val)
+	{
+		return (INT)INTEL_ORDER32((DWORD)val);
+	}
 #endif
 
 /*-----------------------------------------------------------------------------

@@ -297,6 +297,21 @@ void UTexture::Serialize( FArchive& Ar )
 		UBits = FLogTwo(USize);
 		VBits = FLogTwo(VSize);
 	}
+
+#if !__INTEL_BYTE_ORDER__
+	// PolyFlags isn't a proper bitfield, so the bits have to be reversed
+	if ( /*Ar.IsSaving() ||*/ Ar.IsLoading())
+	{
+		DWORD OldPolyFlags = PolyFlags;
+		PolyFlags = 0;
+		for (INT i = 0; i < 32; i++)
+		{
+			PolyFlags <<= 1;
+			PolyFlags |= (OldPolyFlags & 1);
+			OldPolyFlags >>= 1;
+		}
+	}
+#endif
 	unguard;
 }
 void UTexture::Export( FOutputDevice& Out, const char* FileType, int Indent )

@@ -11,7 +11,11 @@
 #endif
 
 #ifndef PLATFORM_BIG_ENDIAN
-#define __INTEL__	1
+	#define __INTEL__	1
+	#define __INTEL_BYTE_ORDER__ 1
+#else
+	#define __INTEL__	0
+	#define __INTEL_BYTE_ORDER__ 0
 #endif
 
 #include <stdarg.h>
