@@ -13,6 +13,11 @@
 	Software rendering private definitions.
 ------------------------------------------------------------------------------------*/
 
+// If ASM is disabled but we're on x86, also force-disable MMX.
+#if !ASM && __INTEL__
+#define GIsMMX false
+#endif
+
 // Maximum supported sizes. 
 #define MaximumYScreenSize  1200   
 #define MaximumXScreenSize  2048
@@ -23,6 +28,27 @@
 extern FLOAT FastSqrtTbl[2<<FASTAPPROX_MAN_BITS];
 
 void SetupFastSqrt();
+
+//
+// _rotl and _rotr alternatives for non-MSVC platforms.
+//
+#ifdef PLATFORM_WIN32
+#include <stdlib.h> // for _rotl and _rotr
+#elif defined(PLATFORM_X86)
+#include <x86intrin.h> // for _rotl and _rotr
+#else
+// no intrinsics or only rotr
+inline unsigned int _rotl( unsigned int a, int s )
+{
+	s &= 31;
+	return (a << s) | (a >> (32 - s));
+}
+inline unsigned int _rotr( unsigned int a, int s )
+{
+	s &= 31;
+	return (a >> s) | (a << (32 - s));
+}
+#endif
 
 //
 // An 8-byte MMX structure.

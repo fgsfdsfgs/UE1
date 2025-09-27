@@ -60,6 +60,9 @@ void USoftwareRenderDevice::Draw2DLine
 			}
 		}
 
+		// Line.h/Line1.h contain some macro expansion shenanigans that only work properly in VC++.
+		// So no lines on GCC for now.
+#ifdef PLATFORM_MSVC
 		// Depth cued line drawer.
 		#define DEPTHSETUP(Arclen) FixDG = (FixG2-FixG1)/Arclen;
 		INT FixG1 = ::Clamp( appRound(P1.Z * 65536.0 * 10000.0), 100*65536, 255*65536 );
@@ -137,6 +140,7 @@ void USoftwareRenderDevice::Draw2DLine
 			#undef  SHIFT
 			#undef  DRAWPIXEL
 		}
+#endif
 	}
 	unguard;
 }

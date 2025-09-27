@@ -33,7 +33,6 @@
 =============================================================================*/
 
 #include "SoftDrvPrivate.h"
-#include <stdlib.h> //for _rotl and _rotr
 
 #include <float.h> // for _finite
 
@@ -1444,6 +1443,8 @@ static void PentiumPolyC32Modulated()
 
  void USoftwareRenderDevice::InnerGouraudMMX15(DWORD PolyFlags, INT MinY, INT MaxY, FSceneNode* Frame,FMipmap* Mip,FSpanBuffer* SpanBuffer)
 {
+	#if ASM
+
 	static  BYTE*	TexBase;
 	static  FMMX*	PalBase;
 	static  FMMX	MMXCoMask,MMXCoShift; 
@@ -2382,7 +2383,6 @@ static void PentiumPolyC32Modulated()
 		}
 	}
 
-	#if ASM
 	__asm emms;
 	#endif
 
@@ -2392,6 +2392,8 @@ static void PentiumPolyC32Modulated()
 
  void USoftwareRenderDevice::InnerGouraudMMX16(DWORD PolyFlags, INT MinY, INT MaxY, FSceneNode* Frame,FMipmap* Mip,FSpanBuffer* SpanBuffer)
 {
+	#if ASM
+
 	static  BYTE*	TexBase;
 	static  FMMX*	PalBase;
 	static  FMMX	MMXCoMask,MMXCoShift; 
@@ -3331,7 +3333,6 @@ static void PentiumPolyC32Modulated()
 		}
 	}
 
-	#if ASM
 	__asm emms;
 	#endif
 
@@ -3378,6 +3379,8 @@ void USoftwareRenderDevice::MMXFlashTriangle
 	FSpanBuffer* SpanBuffer
 )
 {
+	#if ASM
+
 	guardSlow(USoftwareRenderDevice::MMXFlashTriangle);
 
 
@@ -3932,6 +3935,7 @@ unguardSlow;
 
 
 	unguardSlow;	// MMXFlashTriangle;
+	#endif
 }
 
 

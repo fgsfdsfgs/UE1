@@ -255,11 +255,20 @@ void appGetGUID( void* GUID );
 extern "C"
 {
 	extern HINSTANCE      hInstance;
+#if __INTEL__
 	extern CORE_API UBOOL GIsMMX;
 	extern CORE_API UBOOL GIsPentiumPro;
 	extern CORE_API UBOOL GIsKatmai;
 	extern CORE_API UBOOL GIsK6;
 	extern CORE_API UBOOL GIsK63D;
+#else
+	// Some of these are still used in SoftDrv.
+	#define GIsMMX false
+	#define GIsPentiumPro false
+	#define GIsKatmai false
+	#define GIsK6 false
+	#define GIsK63D false
+#endif
 }
 
 /*----------------------------------------------------------------------------
