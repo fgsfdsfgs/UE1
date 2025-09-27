@@ -649,7 +649,20 @@ CORE_API void* appGetDllHandle( const char* Filename )
 	if( (Cur = appStrchr( Test, '.' )) != NULL )
 		*Cur = '\0';
 
-	dlerror();	// Clear any error condition.
+	// Check if the library was linked to the executable.
+	Result = (void*)dlopen( NULL, RTLD_NOW );
+	Error = dlerror();
+	if( Error != NULL )
+	{
+		debugf( "dlerror(): %s", Error );
+	}
+	else
+	{
+		(void*)dlsym( Result, Test );
+		Error = dlerror();
+		if( Error == NULL )
+			return Result;
+	}
 
 	// Load the new library.
 	Result = (void*)dlopen( Filename, RTLD_NOW );
