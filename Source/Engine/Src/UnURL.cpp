@@ -268,7 +268,7 @@ FURL::FURL( FURL* Base, const char* TextURL, ETravelType Type )
 	if
 	(	!ValidNetChar(*Protocol  )
 	||	!ValidNetChar(*Host      )
-	||	!ValidNetChar(*Map       )
+	//||	!ValidNetChar(*Map       )
 	||	!ValidNetChar(*Portal    )
 	||	(!FarHost && !FarMap && !Op.Num()) )
 	{
