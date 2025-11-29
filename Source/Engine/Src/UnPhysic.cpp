@@ -1768,7 +1768,11 @@ void APawn::physSpider(FLOAT deltaTime, INT Iterations)
 		ZoneVel = FVector(0,0,0);
 	FVector DesiredMove = Velocity + ZoneVel;
 	FLOAT MoveSize = DesiredMove.Size();
-	FVector DesiredDir = DesiredMove/MoveSize;
+	FVector DesiredDir;
+	if (MoveSize == 0.0f)
+		DesiredDir = FVector(0,0,0);
+	else
+		DesiredDir = DesiredMove/MoveSize;
 
 	//Perform the move
 	// Look for supporting wall
