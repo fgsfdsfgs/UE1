@@ -110,6 +110,8 @@ IMPLEMENT_CLASS(USound);
 
 #if !__INTEL_BYTE_ORDER__
 
+static _WORD wBitsPerSample = 0;
+
 //
 //	Helpers for the below function.
 //
@@ -121,7 +123,7 @@ static inline void ByteSwapChunk( FFormatChunk* Chunk )
 	LittleEndianRef( Chunk->nAvgBytesPerSec );
 	LittleEndianRef( Chunk->nBlockAlign );
 	LittleEndianRef( Chunk->wBitsPerSample );
-	LittleEndianRef( Chunk->cbSize );
+	//LittleEndianRef( Chunk->cbSize );
 }
 
 static inline void ByteSwapChunk( FSampleChunk* Chunk )
@@ -155,7 +157,6 @@ static inline void ByteSwapChunk( FRiffChunk* RiffChunk )
 	// These will be filled in as we go through the chunks.
 	BYTE* Samples = nullptr;
 	BYTE* SamplesEnd = nullptr;
-	_WORD wBitsPerSample = 0;
 
 	// Swap common chunk fields.
 	LittleEndianRef( RiffChunk->ChunkID );
@@ -210,6 +211,7 @@ static inline void ByteSwapChunk( FRiffChunk* RiffChunk )
 //
 void FWaveModInfo::ByteSwapWave( TArray<BYTE>& WavData )
 {
+	wBitsPerSample = 0;
 	// Swap header fields.
 	FRiffWaveHeader* RiffHdr = (FRiffWaveHeader*)&WavData(0);
 	LittleEndianRef( RiffHdr->rID );
@@ -303,7 +305,7 @@ UBOOL FWaveModInfo::ReadWaveInfo( TArray<BYTE>& WavData )
 
 	// Chunk found ? smpl chunk is optional.
 	// Find the first sample-loop structure, and the total number of them.
-	if( (BYTE*)RiffChunk+4<WaveDataEnd && RiffChunk->ChunkID == mmioFOURCC('s','m','p','l') )
+	if( (BYTE*)RiffChunk+8<WaveDataEnd && RiffChunk->ChunkID == mmioFOURCC('s','m','p','l') )
 	{
 		FSampleChunk* pSampleChunk =  (FSampleChunk*)( (BYTE*)RiffChunk + 8);
 		SampleLoopsNum  = pSampleChunk->cSampleLoops; // Number of tSampleLoop structures.
