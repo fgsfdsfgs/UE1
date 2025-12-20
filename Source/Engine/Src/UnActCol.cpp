@@ -70,9 +70,9 @@ public:
 	void GetActorExtent( AActor *Actor, INT &iX0, INT &iX1, INT &iY0, INT &iY1, INT &iZ0, INT &iZ1 );
 	void GetHashIndices( FVector Location, INT &iX, INT &iY, INT &iZ )
 	{
-		iX = Clamp(appRound( (Location.X + XY_OFS) * (1.0/GRAN_XY) ), 0, (int)NUM_BUCKETS);
-		iY = Clamp(appRound( (Location.Y + XY_OFS) * (1.0/GRAN_XY) ), 0, (int)NUM_BUCKETS);
-		iZ = Clamp(appRound( (Location.Z + Z_OFS ) * (1.0/GRAN_Z ) ), 0, (int)NUM_BUCKETS);
+		iX = Clamp(appRound( (Location.X + XY_OFS) * (1.0/GRAN_XY) ), 0, (int)NUM_BUCKETS-1);
+		iY = Clamp(appRound( (Location.Y + XY_OFS) * (1.0/GRAN_XY) ), 0, (int)NUM_BUCKETS-1);
+		iZ = Clamp(appRound( (Location.Z + Z_OFS ) * (1.0/GRAN_Z ) ), 0, (int)NUM_BUCKETS-1);
 	}
 	struct FCollisionLink*& GetHashLink( INT iX, INT iY, INT iZ, INT &iLocation )
 	{
