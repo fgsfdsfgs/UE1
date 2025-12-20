@@ -7,6 +7,11 @@
 #include <vitaGL.h>
 #include <unistd.h>
 #endif
+#ifdef PLATFORM_PSP
+#include <unistd.h>
+#include <sys/stat.h>
+#include <psppower.h>
+#endif
 
 #include "Engine.h"
 
@@ -124,6 +129,32 @@ static void PlatformPreInit()
 
 	vglInitWithCustomThreshold( 0, 960, 544, VGL_MEM_THRESHOLD, 0, 0, 0, SCE_GXM_MULTISAMPLE_2X );
 	vglSetSemanticBindingMode( VGL_MODE_POSTPONED );
+}
+
+#elif defined(PLATFORM_PSP)
+
+void PlatformPreInit()
+{
+	// disable FPU exceptions as our gods at Intel intended
+	__asm__ volatile
+	(
+		"cfc1    $2, $31\n"
+		"lui     $8, 0x80\n"
+		"and     $8, $2, $8\n"
+		"ctc1    $8, $31\n"
+		: : : "$2", "$8"
+	);
+
+	// chdir into System if we're not in there
+	struct stat st;
+	if( stat( "./System", &st ) == 0 )
+	{
+		chdir( "./System" );
+	}
+
+	// set clocks to 333/167
+	scePowerSetCpuClockFrequency( 333 );
+	scePowerSetBusClockFrequency( 167 );
 }
 
 #else
@@ -245,7 +276,7 @@ void ExitEngine( UEngine* Engine )
 #ifdef PLATFORM_WIN32
 INT WINAPI WinMain( HINSTANCE hInInstance, HINSTANCE hPrevInstance, char* InCmdLine, INT nCmdShow )
 #else
-int main( int argc, const char** argv )
+int main( int argc, char** argv )
 #endif
 {
 #ifdef PLATFORM_WIN32
@@ -253,7 +284,7 @@ int main( int argc, const char** argv )
 #else
 	hInstance = NULL;
 	// Remember arguments since we don't have GetCommandLine().
-	appSetCmdLine( argc, argv );
+	appSetCmdLine( argc, (const char**)argv );
 	PlatformPreInit();
 #endif
 

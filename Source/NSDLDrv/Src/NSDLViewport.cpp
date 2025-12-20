@@ -326,12 +326,14 @@ void UNSDLViewport::OpenWindow( void* InParentWindow, UBOOL Temporary, INT NewX,
 		// Set OpenGL attributes if needed.
 		if( DoOpenGL )
 		{
+#ifndef PLATFORM_PSP // PSP only has ES1.1
 			if( GLProfile == SDL_GL_CONTEXT_PROFILE_ES )
 			{
 				// Request GLES2.
 				SDL_GL_SetAttribute( SDL_GL_CONTEXT_MAJOR_VERSION, 2 );
 				SDL_GL_SetAttribute( SDL_GL_CONTEXT_MINOR_VERSION, 0 );
 			}
+#endif
 			SDL_GL_SetAttribute( SDL_GL_CONTEXT_PROFILE_MASK, GLProfile );
 		}
 

@@ -1092,6 +1092,29 @@ CORE_API FArchive& operator<<( FArchive& Ar, FLabelEntry &Label )
 	UStruct implementation.
 -----------------------------------------------------------------------------*/
 
+#ifdef PLATFORM_PSP
+template<typename T>
+inline void XferAligned( FArchive& Ar, T* Ptr )
+{
+	BYTE Temp[sizeof(T)] GCC_ALIGN(8);
+	if( Ar.IsLoading() )
+	{
+		Ar << *(T*)Temp;
+		__builtin_memcpy( Ptr, Temp, sizeof( T ) );
+	}
+	else
+	{
+		__builtin_memcpy( Temp, Ptr, sizeof( T ) );
+		Ar << *(T*)Temp;
+	}
+}
+template<>
+inline void XferAligned<BYTE>( FArchive& Ar, BYTE* Ptr )
+{
+	Ar << *Ptr;
+}
+#endif
+
 //
 // Serialize an expression to an archive.
 // Returns expression token.
@@ -1100,7 +1123,12 @@ EExprToken UStruct::SerializeExpr( INT& iCode, FArchive& Ar )
 {
 	EExprToken Expr=(EExprToken)0;
 	guard(SerializeExpr);
-	#define XFER(T) {Ar << *(T*)&Script(iCode); iCode += sizeof(T); }
+
+	#ifdef PLATFORM_PSP
+		#define XFER(T) {XferAligned(Ar, (T*)&Script(iCode)); iCode += sizeof(T);}
+	#else
+		#define XFER(T) {Ar << *(T*)&Script(iCode); iCode += sizeof(T); }
+	#endif
 
 	// Get expr token.
 	XFER(BYTE);
@@ -1271,10 +1299,19 @@ EExprToken UStruct::SerializeExpr( INT& iCode, FArchive& Ar )
 		}
 		case EX_Case:
 		{
+#ifdef PLATFORM_PSP
+			// avoid unaligned access
+			_WORD W;
+			__builtin_memcpy( &W, &Script(iCode), sizeof( W ) );
+			XFER(_WORD); // Code offset.
+			if( W != MAXWORD )
+				SerializeExpr( iCode, Ar ); // Boolean expr.
+#else
 			_WORD *W=(_WORD*)&Script(iCode);
 			XFER(_WORD);; // Code offset.
 			if( *W != MAXWORD )
 				SerializeExpr( iCode, Ar ); // Boolean expr.
+#endif
 			break;
 		}
 		case EX_LabelTable:

@@ -335,7 +335,11 @@ CORE_API DOUBLE appAtan2( DOUBLE Y, FLOAT X )
 }
 CORE_API DOUBLE appSqrt( DOUBLE Value )
 {
+#ifdef PLATFORM_PSP
+	return __builtin_allegrex_sqrt_s( (FLOAT)Value );
+#else
 	return sqrt(Value);
+#endif
 }
 CORE_API DOUBLE appPow( DOUBLE A, DOUBLE B )
 {
@@ -355,15 +359,27 @@ CORE_API FLOAT appFrand()
 }
 CORE_API INT appFloor( FLOAT Value )
 {
+#ifdef PLATFORM_PSP
+	return __builtin_allegrex_floor_w_s( Value );
+#else
 	return (INT)floorf(Value);
+#endif
 }
 CORE_API INT appCeil( FLOAT Value )
 {
+#ifdef PLATFORM_PSP
+	return __builtin_allegrex_ceil_w_s( Value );
+#else
 	return (INT)ceilf(Value);
+#endif
 }
 CORE_API INT appRound( FLOAT Value )
 {
+#ifdef PLATFORM_PSP
+	return __builtin_allegrex_floor_w_s( Value + 0.5f );
+#else
 	return (INT)floorf(Value + 0.5f);
+#endif
 }
 
 /*-----------------------------------------------------------------------------

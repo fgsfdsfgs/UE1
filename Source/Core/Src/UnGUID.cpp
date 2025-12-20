@@ -97,7 +97,7 @@ void get_ieee_node_identifier( byte* nodeid )
 	static unsigned32 ip32 = 0;
 	unsigned16 random16;
 
-#ifdef PLATFORM_PSVITA
+#if defined(PLATFORM_PSVITA) || defined(PLATFORM_PSP)
 	// gethostname/gethostbyname are unavailable when WLAN is turned off
 	ip32 = 0x0100007f; // 127.0.0.1
 #elif !defined(PLATFORM_WIN32)
@@ -113,8 +113,8 @@ void get_ieee_node_identifier( byte* nodeid )
 
 	random16 = true_random();
 
-#ifdef PLATFORM_ARM
-	// avoid unaligned access on ARM
+#if defined(PLATFORM_ARM) || defined(PLATFORM_MIPS)
+	// avoid unaligned access on ARM and MIPS
 	memcpy(nodeid + 0, &ip32, sizeof(ip32));
 	memcpy(nodeid + 4, &random16, sizeof(random16));
 #else

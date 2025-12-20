@@ -87,4 +87,13 @@ if(VITA)
     NAME ${VITA_APP_NAME}
     FILE ${CMAKE_CURRENT_SOURCE_DIR}/Res/sce_sys sce_sys
   )
+elseif(PSP)
+  create_pbp_file(
+    TARGET ${PROJECT_NAME}
+    ICON_PATH NULL
+    BACKGROUND_PATH NULL
+    PREVIEW_PATH NULL
+    TITLE ${PROJECT_NAME}
+    VERSION 01.00
+  )
 endif()

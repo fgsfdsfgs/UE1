@@ -14,7 +14,7 @@
 
 #include "CorePrivate.h"
 
-#ifdef PLATFORM_PSVITA
+#if defined(PLATFORM_PSVITA) || defined(PLATFORM_PSP)
 #define pthread_setname_np(t, n) do { } while(0)
 #endif
 

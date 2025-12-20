@@ -1177,6 +1177,7 @@ void appError( const char* Msg )
 		strncat( GErrorHist, LocalizeError("History"), ARRAY_COUNT(GErrorHist) );
 		strncat( GErrorHist, ": ", ARRAY_COUNT(GErrorHist) );
 	}
+	__builtin_trap();
 	throw( 1 );
 #endif
 }
@@ -1570,7 +1571,7 @@ CORE_API const char* appBaseDir()
 			if (BaseDir[i - 1] == '\\' || BaseDir[i - 1] == '/')
 				break;
 		BaseDir[i] = 0;
-#elif defined(PLATFORM_PSVITA)
+#elif defined(PLATFORM_PSVITA) || defined(PLATFORM_PSP)
 		if ( getcwd( BaseDir, sizeof(BaseDir) ) )
 			appStrncat( BaseDir, "/", sizeof(BaseDir) - 1 );
 #elif defined(PLATFORM_SDL)

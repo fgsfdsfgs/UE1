@@ -25,6 +25,9 @@ typedef char* LPSTR;
 #ifdef PLATFORM_WIN32
 #define IPBYTE(A, N) A.S_un.S_un_b.s_b##N
 #else
+#ifdef PLATFORM_PSP
+#define INADDR_NONE 0xffffffff
+#endif
 #define INVALID_SOCKET (-1)
 #define SOCKET_ERROR (-1)
 #define WSAEWOULDBLOCK EWOULDBLOCK
@@ -34,7 +37,7 @@ typedef char* LPSTR;
 #define WSAHOST_NOT_FOUND HOST_NOT_FOUND
 #define WSANO_DATA NO_ADDRESS
 #define closesocket close
-#ifdef PLATFORM_PSVITA
+#if defined(PLATFORM_PSVITA) || defined(PLATFORM_PSP)
 // this is only used for FIONBIO
 #define ioctlsocket( fd, opt, arg ) setsockopt( (fd), SOL_SOCKET, SO_NONBLOCK, (const void*)(arg), sizeof(*(arg)) )
 #else

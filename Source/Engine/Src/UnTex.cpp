@@ -288,7 +288,11 @@ void UTexture::Serialize( FArchive& Ar )
 	&&	!GIsEditor
 	&&	Client 
 	&&	Client->LowDetailTextures
-	&&	Mips.Num()>1 )
+	&&	Mips.Num()>1
+#ifdef PLATFORM_PSP
+	&&	( USize > 16 && VSize > 16 )
+#endif
+	)
 	{
 		Mips.Remove( 0 );
 		Scale *= 2;
@@ -297,6 +301,29 @@ void UTexture::Serialize( FArchive& Ar )
 		UBits = FLogTwo(USize);
 		VBits = FLogTwo(VSize);
 	}
+
+#ifdef PLATFORM_PSP
+	if( BumpMap )
+	{
+		if( BumpMap->Mips.Num() )
+			BumpMap->Mips.Empty();
+		BumpMap = nullptr;
+	}
+	if( DetailTexture )
+	{
+		if( DetailTexture->Mips.Num() )
+			DetailTexture->Mips.Empty();
+		DetailTexture = nullptr;
+	}
+	if( Ar.IsLoading() && !GIsEditor )
+	{
+		if( TextureFlags & (TF_Parametric|TF_Realtime|TF_RealtimePalette) )
+		{
+			if( MaxFrameRate == 0.f || MaxFrameRate > 30.f )
+				MaxFrameRate = 30.f;
+		}
+	}
+#endif
 
 #if !__INTEL_BYTE_ORDER__
 	// PolyFlags isn't a proper bitfield, so the bits have to be reversed

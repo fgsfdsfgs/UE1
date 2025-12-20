@@ -134,7 +134,6 @@ const char* SocketError( INT Code )
 		case EPROTOTYPE:			return "EPROTOTYPE";
 		case ENOPROTOOPT:			return "ENOPROTOOPT";
 		case EPROTONOSUPPORT:		return "EPROTONOSUPPORT";
-		case ESOCKTNOSUPPORT:		return "ESOCKTNOSUPPORT";
 		case EOPNOTSUPP:			return "EOPNOTSUPP";
 		case EPFNOSUPPORT:			return "EPFNOSUPPORT";
 		case EAFNOSUPPORT:			return "EAFNOSUPPORT";
@@ -148,7 +147,6 @@ const char* SocketError( INT Code )
 		case ENOBUFS:				return "ENOBUFS";
 		case EISCONN:				return "EISCONN";
 		case ENOTCONN:				return "ENOTCONN";
-		case ESHUTDOWN:				return "ESHUTDOWN";
 		case ETOOMANYREFS:			return "ETOOMANYREFS";
 		case ETIMEDOUT:				return "ETIMEDOUT";
 		case ECONNREFUSED:			return "ECONNREFUSED";
@@ -157,10 +155,14 @@ const char* SocketError( INT Code )
 		case EHOSTDOWN:				return "EHOSTDOWN";
 		case EHOSTUNREACH:			return "EHOSTUNREACH";
 		case ENOTEMPTY:				return "ENOTEMPTY";
-		case EUSERS:				return "EUSERS";
 		case EDQUOT:				return "EDQUOT";
 		case ESTALE:				return "ESTALE";
+#ifndef PLATFORM_PSP
+		case ESOCKTNOSUPPORT:		return "ESOCKTNOSUPPORT";
+		case ESHUTDOWN:				return "ESHUTDOWN";
+		case EUSERS:				return "EUSERS";
 		case EREMOTE:				return "EREMOTE";
+#endif
 #ifndef PLATFORM_PSVITA
 		case HOST_NOT_FOUND:		return "HOST_NOT_FOUND";
 		case TRY_AGAIN:				return "TRY_AGAIN";
