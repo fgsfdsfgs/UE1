@@ -58,6 +58,7 @@ UNOpenGLRenderDevice::UNOpenGLRenderDevice()
 	UseWindowBrightness = true;
 	CurrentBrightness = -1.f;
 	SwapInterval = 1;
+	DefaultFOV = 90.0f;
 }
 
 UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
@@ -233,9 +234,7 @@ void UNOpenGLRenderDevice::Lock( FPlane FlashScale, FPlane FlashFog, FPlane Scre
 
 	if( AutoFOV && Viewport && Viewport->Actor && Viewport->Actor->DesiredFOV == 90.0f )
 	{
-		const FLOAT Aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
-		const FLOAT Fov = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( Aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
-		Viewport->Actor->DesiredFOV = Fov;
+		Viewport->Actor->DesiredFOV = DefaultFOV;
 	}
 
 	unguard;
@@ -642,6 +641,10 @@ void UNOpenGLRenderDevice::SetSceneNode( FSceneNode* Frame )
 		CurrentSceneNode.YB = Frame->YB;
 		CurrentSceneNode.SizeX = Viewport->SizeX;
 		CurrentSceneNode.SizeY = Viewport->SizeY;
+		const FLOAT Aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
+		DefaultFOV = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( Aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
+		if( AutoFOV )
+			Viewport->Actor->DesiredFOV = 90.0f;
 	}
 
 	if( Frame->FX != CurrentSceneNode.FX || Frame->FY != CurrentSceneNode.FY ||
