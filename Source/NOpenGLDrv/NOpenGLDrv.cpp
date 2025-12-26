@@ -643,7 +643,7 @@ void UNOpenGLRenderDevice::SetSceneNode( FSceneNode* Frame )
 		CurrentSceneNode.SizeY = Viewport->SizeY;
 		const FLOAT Aspect = (FLOAT)Viewport->SizeX / (FLOAT)Viewport->SizeY;
 		DefaultFOV = (FLOAT)( appAtan( appTan( 90.0 * PI / 360.0 ) * ( Aspect / ( 4.0 / 3.0 ) ) ) * 360.0 ) / PI;
-		if( AutoFOV )
+		if( AutoFOV && Viewport->Actor->DesiredFOV > 90.0f )
 			Viewport->Actor->DesiredFOV = 90.0f;
 	}
 
