@@ -962,9 +962,9 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 				for( DWORD i = 0; i < Count; ++i, ++Src )
 					*Dst++ = *Src ? ( Pal[*Src] | ALPHA_MASK ) : 0;
 #else
-				for( i = 0; i < Count; ++i, ++Src )
+				for( DWORD i = 0; i < Count; ++i, ++Src )
 				{
-					FColor Color = Palette[*Src];
+					FColor Color = Info.Palette[*Src];
 					Color.A = *Src ? 255 : 0;
 					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
 				}
@@ -979,7 +979,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 #else
 				for( DWORD i = 0; i < Count; ++i, ++Src )
 				{
-					FColor Color = Palette[*Src];
+					FColor Color = Info.Palette[*Src];
 					Color.A = 255;
 					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
 				}
