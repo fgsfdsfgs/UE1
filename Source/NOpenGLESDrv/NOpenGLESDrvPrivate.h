@@ -133,6 +133,7 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	glm::mat4 MtxProj;
 	glm::mat4 MtxMVP;
 	FPlane ColorMod;
+	FLOAT DefaultFOV;
 
 	struct FCachedSceneNode
 	{

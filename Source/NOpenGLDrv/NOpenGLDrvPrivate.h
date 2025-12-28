@@ -61,6 +61,7 @@ class DLL_EXPORT UNOpenGLRenderDevice : public URenderDevice
 	FLOAT RProjZ, Aspect;
 	FLOAT RFX2, RFY2;
 	FPlane ColorMod;
+	FLOAT DefaultFOV;
 
 	struct FCachedSceneNode
 	{
