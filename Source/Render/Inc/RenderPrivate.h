@@ -344,6 +344,19 @@ extern FLOAT DivSqrtExpTbl[1<<APPROX_EXP_BITS],DivExpTbl[1<<APPROX_EXP_BITS];
 		__asm fstp [F]										/* store result                       */\
 	}\
 	return F;
+#else
+#define POWER_ASM(ManTbl,ExpTbl)\
+	{\
+		DWORD A,B;\
+		A = *(DWORD*)&F;\
+		A >>= (32-APPROX_EXP_BITS)-APPROX_MAN_BITS;\
+		A &= (1<<(APPROX_MAN_BITS))-1;\
+		B = *(DWORD*)&F;\
+		B >>= 32-APPROX_EXP_BITS;\
+		F = ManTbl[A]*ExpTbl[B];\
+	}\
+	return F;
+#endif
 //
 // Fast floating point power routines.
 // Pretty accurate to the first 10 bits.
@@ -351,6 +364,7 @@ extern FLOAT DivSqrtExpTbl[1<<APPROX_EXP_BITS],DivExpTbl[1<<APPROX_EXP_BITS];
 //
 inline FLOAT DivSqrtApprox(FLOAT F) {POWER_ASM(DivSqrtManTbl,DivSqrtExpTbl);}
 inline FLOAT DivApprox    (FLOAT F) {POWER_ASM(DivManTbl,    DivExpTbl    );}
+#if ASM
 inline FLOAT SqrtApprox   (FLOAT F)
 {
 	__asm
@@ -368,10 +382,26 @@ inline FLOAT SqrtApprox   (FLOAT F)
 	return F;								// compiles to fld [F].
 }
 #else
+inline FLOAT SqrtApprox   (FLOAT F)
+{
+	DWORD A,B;
+	A = *(DWORD*)&F;
+	A >>= (23-APPROX_MAN_BITS);
+	A &= (1<<(APPROX_MAN_BITS+1))-1;
+	A = *(DWORD*)&SqrtManTbl[A];
+	B = *(DWORD*)&F;
+	B &= 0x7F000000UL;
+	B >>= 1;
+	A += B;
+	F = *(FLOAT*)&A;
+	return F;
+}
+#endif
+/*
 inline FLOAT DivSqrtApprox(FLOAT F) {return 1.0/appSqrt(F);}
 inline FLOAT DivApprox    (FLOAT F) {return 1.0/F;}
 inline FLOAT SqrtApprox   (FLOAT F) {return appSqrt(F);}
-#endif
+*/
 
 /*------------------------------------------------------------------------------------
 	URender.
