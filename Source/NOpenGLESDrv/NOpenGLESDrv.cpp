@@ -1008,9 +1008,6 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		return;
 	}
 
-	// We're gonna be using the compose buffer, so expand it to fit.
-	EnsureComposeSize(Info.Mips[0]->USize * Info.Mips[0]->VSize * 4);
-
 	// Upload all mips.
 	for( INT MipIndex = 0; MipIndex < Info.NumMips; ++MipIndex )
 	{
