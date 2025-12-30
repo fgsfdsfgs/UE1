@@ -103,8 +103,7 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 
 	UpdateSwapInterval();
 
-	ComposeSize = 256 * 256 * 4;
-	Compose = (BYTE*)appMalloc( ComposeSize, "GLComposeBuf" );
+	EnsureComposeSize( 256 * 256 * 4 );
 	verify( Compose );
 
 	VtxDataSize = 18 * MAX_VERTS; // should be enough for all attributes
@@ -920,6 +919,85 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	unguard;
 }
 
+void UNOpenGLESRenderDevice::EnsureComposeSize( const DWORD NewSize )
+{
+	if( NewSize > ComposeSize )
+	{
+		ComposeSize = NewSize;
+		Compose = (BYTE*)appRealloc( Compose, NewSize, "GLComposeBuf" );
+	}
+	verify( Compose );
+}
+
+void UNOpenGLESRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked, BYTE*& UploadBuf, GLenum& UploadFormat )
+{
+	// 8-bit indexed. We have to fix the alpha component since it's mostly garbage in non-detailmaps.
+	const BYTE* Src = (const BYTE*)Mip->DataPtr;
+	const DWORD* Pal = (const DWORD*)Palette;
+	const DWORD Count = Mip->USize * Mip->VSize;
+	EnsureComposeSize( Count * 4 );
+	UploadBuf = Compose;
+	UploadFormat = GL_RGBA;
+	DWORD* Dst = (DWORD*)Compose;
+	if( Masked )
+	{
+		// index 0 is transparent
+#if __INTEL_BYTE_ORDER__
+		for( DWORD i = 0; i < Count; ++i, ++Src )
+			*Dst++ = *Src ? ( Pal[*Src] | ALPHA_MASK ) : 0;
+#else
+		for( DWORD i = 0; i < Count; ++i, ++Src )
+		{
+			FColor Color = Palette[*Src];
+			Color.A = *Src ? 255 : 0;
+			*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
+		}
+#endif
+	}
+	else
+	{
+		// index 0 is whatever
+#if __INTEL_BYTE_ORDER__
+		for( DWORD i = 0; i < Count; ++i )
+			*Dst++ = ( Pal[*Src++] | ALPHA_MASK );
+#else
+		for( DWORD i = 0; i < Count; ++i, ++Src )
+		{
+			FColor Color = Palette[*Src];
+			Color.A = 255;
+			*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
+		}
+#endif
+	}
+}
+
+void UNOpenGLESRenderDevice::ConvertTextureMipBGRA7777( const FMipmap* Mip, BYTE*& UploadBuf, GLenum& UploadFormat )
+{
+	if( UseBGRA )
+	{
+		// BGRA8888 (or 7777) and we can upload it as-is.
+		UploadBuf = Mip->DataPtr;
+		UploadFormat = GL_BGRA_EXT;
+	}
+	else
+	{
+		// BGRA8888 (or 7777), but we must swap it because it's not supported natively.
+		const BYTE* Src = (const BYTE*)Mip->DataPtr;
+		const DWORD Count = Mip->USize * Mip->VSize;
+		EnsureComposeSize(Count * 4);
+		UploadBuf = Compose;
+		UploadFormat = GL_RGBA;
+		BYTE* Dst = (BYTE*)Compose;
+		for( DWORD i = 0; i < Count; ++i, Src += 4 )
+		{
+			*Dst++ = Src[2];
+			*Dst++ = Src[1];
+			*Dst++ = Src[0];
+			*Dst++ = Src[3];
+		}
+	}
+}
+
 void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture )
 {
 	guard(UNOpenGLESRenderDevice::UploadTexture);
@@ -931,83 +1009,21 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 	}
 
 	// We're gonna be using the compose buffer, so expand it to fit.
-	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
-	if( NewComposeSize > ComposeSize )
-	{
-		Compose = (BYTE*)appRealloc( Compose, NewComposeSize, "GLComposeBuf" );
-		verify( Compose );
-	}
+	EnsureComposeSize(Info.Mips[0]->USize * Info.Mips[0]->VSize * 4);
 
 	// Upload all mips.
 	for( INT MipIndex = 0; MipIndex < Info.NumMips; ++MipIndex )
 	{
 		const FMipmap* Mip = Info.Mips[MipIndex];
-		if( !Mip || !Mip->DataPtr ) break;
 		BYTE* UploadBuf;
 		GLenum UploadFormat;
+		if( !Mip || !Mip->DataPtr )
+			break;
 		// Convert texture if needed.
 		if( Info.Palette )
-		{
-			// 8-bit indexed. We have to fix the alpha component since it's mostly garbage in non-detailmaps.
-			UploadBuf = Compose;
-			UploadFormat = GL_RGBA;
-			DWORD* Dst = (DWORD*)Compose;
-			const BYTE* Src = (const BYTE*)Mip->DataPtr;
-			const DWORD* Pal = (const DWORD*)Info.Palette;
-			const DWORD Count = Mip->USize * Mip->VSize;
-			if( Masked )
-			{
-				// index 0 is transparent
-#if __INTEL_BYTE_ORDER__
-				for( DWORD i = 0; i < Count; ++i, ++Src )
-					*Dst++ = *Src ? ( Pal[*Src] | ALPHA_MASK ) : 0;
-#else
-				for( DWORD i = 0; i < Count; ++i, ++Src )
-				{
-					FColor Color = Info.Palette[*Src];
-					Color.A = *Src ? 255 : 0;
-					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
-				}
-#endif
-			}
-			else
-			{
-				// index 0 is whatever
-#if __INTEL_BYTE_ORDER__
-				for( DWORD i = 0; i < Count; ++i )
-					*Dst++ = ( Pal[*Src++] | ALPHA_MASK );
-#else
-				for( DWORD i = 0; i < Count; ++i, ++Src )
-				{
-					FColor Color = Info.Palette[*Src];
-					Color.A = 255;
-					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
-				}
-#endif
-			}
-		}
-		else if( UseBGRA )
-		{
-			// BGRA8888 (or 7777) and we can upload it as-is.
-			UploadBuf = Mip->DataPtr;
-			UploadFormat = GL_BGRA_EXT;
-		}
+			ConvertTextureMipI8( Mip, Info.Palette, Masked, UploadBuf, UploadFormat );
 		else
-		{
-			// BGRA8888 (or 7777), but we must swap it because it's not supported natively.
-			UploadBuf = Compose;
-			UploadFormat = GL_RGBA;
-			BYTE* Dst = (BYTE*)Compose;
-			const BYTE* Src = (const BYTE*)Mip->DataPtr;
-			const DWORD Count = Mip->USize * Mip->VSize;
-			for( DWORD i = 0; i < Count; ++i, Src += 4 )
-			{
-				*Dst++ = Src[2];
-				*Dst++ = Src[1];
-				*Dst++ = Src[0];
-				*Dst++ = Src[3];
-			}
-		}
+			ConvertTextureMipBGRA7777( Mip, UploadBuf, UploadFormat );
 		// Upload to GL.
 		if( NewTexture )
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
