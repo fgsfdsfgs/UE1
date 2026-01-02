@@ -757,7 +757,7 @@ void UNOpenGLESRenderDevice::SetSceneNode( FSceneNode* Frame )
 		Aspect = Frame->FY / Frame->FX;
 		RFX2 = 2.0f * RProjZ / Frame->FX;
 		RFY2 = 2.0f * RProjZ * Aspect / Frame->FY;
-		MtxProj = glm::frustum( -RProjZ, +RProjZ, -Aspect * RProjZ, +Aspect * RProjZ, 1.f, 32768.f );
+		MtxProj = glm::frustum( -RProjZ, +RProjZ, -Aspect * RProjZ, +Aspect * RProjZ, 1.f, 65336.f );
 		MtxMVP = MtxProj * MtxModelView;
 		CurrentSceneNode.FX = Frame->FX;
 		CurrentSceneNode.FY = Frame->FY;

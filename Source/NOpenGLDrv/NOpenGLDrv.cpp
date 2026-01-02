@@ -653,7 +653,7 @@ void UNOpenGLRenderDevice::SetSceneNode( FSceneNode* Frame )
 		RFY2 = 2.0f * RProjZ * Aspect / Frame->FY;
 		glMatrixMode( GL_PROJECTION );
 		glLoadIdentity();
-		glFrustum( -RProjZ, +RProjZ, -Aspect * RProjZ, +Aspect * RProjZ, 1.0, 32768.0 );
+		glFrustum( -RProjZ, +RProjZ, -Aspect * RProjZ, +Aspect * RProjZ, 1.0, 65336.0 );
 		CurrentSceneNode.FX = Frame->FX;
 		CurrentSceneNode.FY = Frame->FY;
 		CurrentSceneNode.FovAngle = Viewport->Actor->FovAngle;
