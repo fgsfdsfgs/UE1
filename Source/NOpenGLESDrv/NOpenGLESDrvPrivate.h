@@ -177,6 +177,9 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 	void SetTexture( INT TMU, FTextureInfo& Info, DWORD PolyFlags, FLOAT PanBias );
 	void ResetTexture( INT TMU );
 	void UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture );
+	void EnsureComposeSize( const DWORD NewSize );
+	void ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked, BYTE*& UploadBuf, GLenum& UploadFormat );
+	void ConvertTextureMipBGRA7777( const FMipmap* Mip, BYTE*& UploadBuf, GLenum& UploadFormat );
 	void UpdateTextureFilter( const FTextureInfo& Info, DWORD PolyFlags );
 	void UpdateSwapInterval();
 

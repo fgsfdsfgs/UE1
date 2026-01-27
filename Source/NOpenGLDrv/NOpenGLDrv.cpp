@@ -106,8 +106,7 @@ UBOOL UNOpenGLRenderDevice::Init( UViewport* InViewport )
 
 	debugf( NAME_Log, "Got OpenGL %d.%d", GLVersion.major, GLVersion.minor );
 
-	ComposeSize = 256 * 256 * 4;
-	Compose = (BYTE*)appMalloc( ComposeSize, "GLComposeBuf" );
+	EnsureComposeSize( 256 * 256 * 4 );
 	verify( Compose );
 
 	// Set modelview matrix to flip stuff into our coordinate system.
@@ -801,6 +800,7 @@ void UNOpenGLRenderDevice::EnsureComposeSize( const DWORD NewSize )
 {
 	if( NewSize > ComposeSize )
 	{
+		ComposeSize = NewSize;
 		Compose = (BYTE*)appRealloc( Compose, NewSize, "GLComposeBuf" );
 	}
 	verify( Compose );
