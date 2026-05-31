@@ -333,10 +333,7 @@ CORE_API DOUBLE appAtan2( DOUBLE Y, FLOAT X )
 {
 	return atan2(Y,X);
 }
-CORE_API DOUBLE appSqrt( DOUBLE Value )
-{
-	return sqrt(Value);
-}
+CORE_API DOUBLE appSqrt( DOUBLE Value ) { return __builtin_sqrt(Value); }
 CORE_API DOUBLE appPow( DOUBLE A, DOUBLE B )
 {
 	return pow(A,B);
@@ -352,18 +349,6 @@ CORE_API INT appRand()
 CORE_API FLOAT appFrand()
 {
 	return rand() / (FLOAT)RAND_MAX;
-}
-CORE_API INT appFloor( FLOAT Value )
-{
-	return (INT)floorf(Value);
-}
-CORE_API INT appCeil( FLOAT Value )
-{
-	return (INT)ceilf(Value);
-}
-CORE_API INT appRound( FLOAT Value )
-{
-	return (INT)floorf(Value + 0.5f);
 }
 
 /*-----------------------------------------------------------------------------

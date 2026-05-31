@@ -55,7 +55,7 @@ if(VITA)
     SceShaccCgExt
     taihen_stub
     SceNet_stub
-    SceNetCtl_stub
+    -Wl,--whole-archive SceNetCtl_stub -Wl,--no-whole-archive
     SceAppMgr_stub
     SceAppUtil_stub
     SceAudio_stub
@@ -67,7 +67,7 @@ if(VITA)
     SceGxm_stub
     SceIme_stub
     SceShaccCg_stub
-    SceSysmodule_stub
+    -Wl,--whole-archive SceSysmodule_stub -Wl,--no-whole-archive
     ScePower_stub
     SceTouch_stub
     SceMotion_stub
