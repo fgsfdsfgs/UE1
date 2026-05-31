@@ -189,7 +189,7 @@ private:
 			check( IdxDataPtr <= IdxDataEnd );
 			check( VtxDataPtr <= VtxDataEnd );
 			if ( UseVAO )
-				glBufferSubData( GL_ARRAY_BUFFER, 0, ( (BYTE*)VtxDataPtr - (BYTE*)VtxData ), VtxData );
+				glBufferData( GL_ARRAY_BUFFER, ( (BYTE*)VtxDataPtr - (BYTE*)VtxData ), (void*)VtxData, GL_DYNAMIC_DRAW );
 			glDrawElements( GL_TRIANGLES, IdxDataPtr - IdxData, GL_UNSIGNED_SHORT, IdxData );
 			IdxCount = 0;
 		}

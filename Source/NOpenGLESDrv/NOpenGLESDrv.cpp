@@ -124,7 +124,6 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	{
 		glGenBuffers( 1, &GLBuf );
 		glBindBuffer( GL_ARRAY_BUFFER, GLBuf );
-		glBufferData( GL_ARRAY_BUFFER, VtxDataSize, (void*)VtxData, GL_DYNAMIC_DRAW );
 	}
 
 	if( UseBGRA )
