@@ -144,7 +144,7 @@ typedef float    FLOAT;  // 32-bit IEEE floating point.
 #endif
 
 // If C++ exception handling is disabled, force guarding to be off.
-#ifdef PLATFORM_NO_EXCEPTIONS
+#if defined(PLATFORM_NO_EXCEPTIONS) || defined(__vita__)
 	#undef  DO_GUARD
 	#undef  DO_SLOW_GUARD
 	#define DO_GUARD 0
