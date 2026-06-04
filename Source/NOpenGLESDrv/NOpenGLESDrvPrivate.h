@@ -73,9 +73,16 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 		GLuint Id;
 		INT BaseMip;
 		INT MaxLevel;
+#ifdef __vita__
+		void *DataPtrs[3];
+		int CurDataPtr;
+#endif
 	};
 	TMap<QWORD, FCachedTexture> BindMap;
 	TArray<GLuint> TexAlloc;
+#ifdef __vita__
+	TArray<QWORD> DynamicTextures;
+#endif
 
 	// Currently bound textures.
 	struct FTexInfo
