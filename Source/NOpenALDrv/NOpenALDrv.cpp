@@ -755,7 +755,7 @@ void UNOpenALAudioSubsystem::Update( FPointRegion Region, FCoords& Listener )
 	// Update music.
 	DOUBLE DeltaTime = appSeconds() - MusicTime;
 	MusicTime += DeltaTime;
-	DeltaTime = Clamp( DeltaTime, 0.0, 1.0 );
+	DeltaTime = Clamp<DOUBLE>( DeltaTime, 0.0, 1.0 );
 	if( Viewport->Actor && Viewport->Actor->Transition != MTRAN_None )
 	{
 		// Track is changing.

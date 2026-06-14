@@ -25,7 +25,7 @@ typedef char* LPSTR;
 #ifdef PLATFORM_WIN32
 #define IPBYTE(A, N) A.S_un.S_un_b.s_b##N
 #else
-#ifdef PLATFORM_PSP
+#ifndef INADDR_NONE
 #define INADDR_NONE 0xffffffff
 #endif
 #define INVALID_SOCKET (-1)
