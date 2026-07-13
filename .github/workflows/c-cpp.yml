@@ -9,7 +9,7 @@ on:
 
 jobs:
   build-i686-windows-msvc:
-    runs-on: windows-2025
+    runs-on: windows-2022
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
