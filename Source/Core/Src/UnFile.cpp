@@ -333,7 +333,14 @@ CORE_API DOUBLE appAtan2( DOUBLE Y, FLOAT X )
 {
 	return atan2(Y,X);
 }
-CORE_API DOUBLE appSqrt( DOUBLE Value ) { return __builtin_sqrt(Value); }
+CORE_API DOUBLE appSqrt( DOUBLE Value )
+{
+#ifdef PLATFORM_PSVITA
+	return __builtin_sqrt(Value);
+#else
+	return sqrt(Value);
+#endif
+}
 CORE_API DOUBLE appPow( DOUBLE A, DOUBLE B )
 {
 	return pow(A,B);
