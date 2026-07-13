@@ -5,7 +5,7 @@
 
 #include "NOpenGLESDrvPrivate.h"
 
-#ifdef __vita__
+#ifdef PLATFORM_PSVITA
 #define HAVE_GL_HEADERS
 #include <vitaGL.h>
 #include <vitasdk.h>
@@ -46,10 +46,6 @@ static constexpr glm::mat4 MtxModelView {
 static constexpr DWORD AttribSizes[AT_Count] = {
 	3, 2, 2, 2, 2, 4, 4
 };
-
-#ifdef __vita__
-static void *NextTexData = nullptr;
-#endif
 
 // from XOpenGLDrv:
 // PF_Masked requires index 0 to be transparent, but is set on the polygon instead of the texture,
@@ -223,7 +219,7 @@ void UNOpenGLESRenderDevice::Flush()
 		ResetTexture( 1 );
 		ResetTexture( 2 );
 		ResetTexture( 3 );
-#ifndef __vita__
+#ifndef PLATFORM_PSVITA
 		glFinish();
 #else
 		for( INT i = 0; i < DynamicTextures.Num(); i++ )
@@ -916,8 +912,8 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 
 	FlushTriangles();
 
-#ifdef __vita__
-	bool isDynamic = Info.TextureFlags & TF_Realtime || !Info.Palette;
+#ifdef PLATFORM_PSVITA
+	const bool bIsDynamic = Info.TextureFlags & TF_Realtime || !Info.Palette;
 #endif
 
 	// Make current.
@@ -930,13 +926,15 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 		Bind = BindMap.Add( NewCacheID, FCachedTexture() );
 		glGenTextures( 1, &Bind->Id );
 		TexAlloc.AddItem( Bind->Id );
-#ifdef __vita__
-		if (isDynamic) {
-			for (int i = 0; i < 3; i++) {
+#ifdef PLATFORM_PSVITA
+		if (bIsDynamic)
+		{
+			for (int i = 0; i < 3; i++)
+			{
 				if (Info.Mips[0]->USize < 8)
-					Bind->DataPtrs[i] = (void *)vglMalloc(8 * Info.Mips[0]->VSize * 4);
+					Bind->DataPtrs[i] = (void *)vglMalloc( 8 * Info.Mips[0]->VSize * 4 );
 				else
-					Bind->DataPtrs[i] = (void *)vglMalloc(Info.Mips[0]->USize * Info.Mips[0]->VSize * 4);
+					Bind->DataPtrs[i] = (void *)vglMalloc( Info.Mips[0]->USize * Info.Mips[0]->VSize * 4 );
 			}
 			Bind->CurDataPtr = 0;
 			DynamicTextures.AddItem( NewCacheID );
@@ -951,8 +949,9 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	{
 		// New texture or it has changed, upload it.
 		Info.TextureFlags &= ~TF_RealtimeChanged;
-#ifdef __vita__
-		if (isDynamic) {
+#ifdef PLATFORM_PSVITA
+		if (bIsDynamic)
+		{
 			NextTexData = Bind->DataPtrs[Bind->CurDataPtr];
 			Bind->CurDataPtr = (Bind->CurDataPtr + 1) % 3;
 		}
@@ -977,9 +976,9 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 	
 	BYTE *_Compose;
 	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
-#ifdef __vita__
-	bool isDynamic = Info.TextureFlags & TF_Realtime || !Info.Palette;
-	if (isDynamic)
+#ifdef PLATFORM_PSVITA
+	const bool bIsDynamic = Info.TextureFlags & TF_Realtime || !Info.Palette;
+	if (bIsDynamic)
 	{
 		_Compose = (BYTE *)NextTexData;
 	}
@@ -1046,16 +1045,21 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		else if( UseBGRA )
 		{
 			// BGRA8888 (or 7777) and we can upload it as-is.		
-#ifdef __vita__
-			if (isDynamic && !NewTexture) {
+#ifdef PLATFORM_PSVITA
+			if (bIsDynamic && !NewTexture)
+			{
 				// sceGxm has a minimum alignment of 8 pixels for linear textures
-				if (Mip->USize >= 8) {
-					sceClibMemcpy(_Compose, Mip->DataPtr, NewComposeSize);
-				} else {
+				if (Mip->USize >= 8)
+				{
+					sceClibMemcpy( _Compose, Mip->DataPtr, NewComposeSize );
+				}
+				else
+				{
 					BYTE *dst = (BYTE *)_Compose;
 					const BYTE *src = (const BYTE *)Mip->DataPtr;
-					for (int i = 0; i < Mip->VSize; i++) {
-						sceClibMemcpy(&dst[8 * i * 4], &src[i * Mip->USize * 4], Mip->USize * 4);
+					for ( INT i = 0; i < Mip->VSize; i++ )
+					{
+						sceClibMemcpy( &dst[8 * i * 4], &src[i * Mip->USize * 4], Mip->USize * 4 );
 					}
 				}
 				UploadBuf = _Compose;
@@ -1083,21 +1087,28 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 				*Dst++ = Src[3];
 			}
 		}
-#ifndef __vita__
+
 		// Upload to GL.
+#ifndef PLATFORM_PSVITA
 		if( NewTexture )
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 		else
 			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 #else
-		if (isDynamic) {
+		if (bIsDynamic)
+		{
 			if( NewTexture )
+			{
 				glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
-			else {
-				SceGxmTexture *t = vglGetGxmTexture(GL_TEXTURE_2D);
-				sceGxmTextureSetData(t, (const void *)UploadBuf );
 			}
-		} else {
+			else
+			{
+				SceGxmTexture *t = vglGetGxmTexture( GL_TEXTURE_2D );
+				sceGxmTextureSetData( t, (const void *)UploadBuf );
+			}
+		}
+		else
+		{
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 		}
 #endif

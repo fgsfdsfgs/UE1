@@ -73,15 +73,17 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 		GLuint Id;
 		INT BaseMip;
 		INT MaxLevel;
-#ifdef __vita__
+#ifdef PLATFORM_PSVITA
 		void *DataPtrs[3];
 		int CurDataPtr;
 #endif
 	};
 	TMap<QWORD, FCachedTexture> BindMap;
 	TArray<GLuint> TexAlloc;
-#ifdef __vita__
+
+#ifdef PLATFORM_PSVITA
 	TArray<QWORD> DynamicTextures;
+	void *NextTexData;
 #endif
 
 	// Currently bound textures.

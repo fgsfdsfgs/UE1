@@ -6,7 +6,7 @@
 		* Created by Tim Sweeney
 =============================================================================*/
 
-#ifdef __vita__
+#ifdef PLATFORM_PSVITA
 #include <vitasdk.h>
 #endif
 
@@ -752,7 +752,7 @@ CORE_API DOUBLE appSeconds()
 	static LARGE_INTEGER ret;
 	QueryPerformanceCounter(&ret);
 	return (DOUBLE)ret.QuadPart * GSecondsPerCycle;
-#elif defined(__vita__)
+#elif defined(PLATFORM_PSVITA)
 	return (DOUBLE)sceKernelGetProcessTimeLow() * GSecondsPerCycle;
 #elif defined(PLATFORM_SDL)
 	return (DOUBLE)SDL_GetPerformanceCounter() * GSecondsPerCycle;
@@ -767,7 +767,7 @@ CORE_API DWORD appCycles()
 	static LARGE_INTEGER ret;
 	QueryPerformanceCounter(&ret);
 	return ret.LowPart;
-#elif defined(__vita__)
+#elif defined(PLATFORM_PSVITA)
 	return sceKernelGetProcessTimeLow();
 #elif defined(PLATFORM_SDL)
 	return SDL_GetPerformanceCounter();
