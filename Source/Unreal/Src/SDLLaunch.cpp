@@ -41,7 +41,7 @@ DLL_EXPORT FExec* GThisExecHook = &GLocalHook;
 extern "C" { SceUInt32 sceUserMainThreadStackSize = 512 * 1024; }
 extern "C" { unsigned int _pthread_stack_default_user = 512 * 1024; }
 extern "C" { unsigned int _newlib_heap_size_user = 200 * 1024 * 1024; }
-#define VGL_MEM_THRESHOLD ( 16 * 1024 * 1024 )
+#define VGL_MEM_THRESHOLD ( 4 * 1024 * 1024 )
 
 static char GRootPath[MAX_PATH] = "app0:/";
 
@@ -121,9 +121,10 @@ static void PlatformPreInit()
 	SceUID Th = sceKernelCreateThread( "CallbackThread", CallbackThread, 0x10000100, 0x10000, 0, 0, nullptr );
 	if( Th >= 0 )
 		sceKernelStartThread( Th, 0, nullptr );
-
-	vglInitWithCustomThreshold( 0, 960, 544, VGL_MEM_THRESHOLD, 0, 0, 0, SCE_GXM_MULTISAMPLE_2X );
-	vglSetSemanticBindingMode( VGL_MODE_POSTPONED );
+	
+	vglSetParamBufferSize(6 * 1024 * 1024);
+	vglSetCircularPoolSize(3 * 1024 * 1024);
+	vglInitWithCustomThreshold( 0, 960, 544, VGL_MEM_THRESHOLD, 0, 0, 0, SCE_GXM_MULTISAMPLE_4X );
 }
 
 #else

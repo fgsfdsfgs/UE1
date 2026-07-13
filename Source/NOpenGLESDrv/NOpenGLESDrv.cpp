@@ -5,6 +5,12 @@
 
 #include "NOpenGLESDrvPrivate.h"
 
+#ifdef __vita__
+#define HAVE_GL_HEADERS
+#include <vitaGL.h>
+#include <vitasdk.h>
+#endif
+
 /*-----------------------------------------------------------------------------
 	GLSL shaders.
 -----------------------------------------------------------------------------*/
@@ -40,6 +46,10 @@ static constexpr glm::mat4 MtxModelView {
 static constexpr DWORD AttribSizes[AT_Count] = {
 	3, 2, 2, 2, 2, 4, 4
 };
+
+#ifdef __vita__
+static void *NextTexData = nullptr;
+#endif
 
 // from XOpenGLDrv:
 // PF_Masked requires index 0 to be transparent, but is set on the polygon instead of the texture,
@@ -124,7 +134,6 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 	{
 		glGenBuffers( 1, &GLBuf );
 		glBindBuffer( GL_ARRAY_BUFFER, GLBuf );
-		glBufferData( GL_ARRAY_BUFFER, VtxDataSize, (void*)VtxData, GL_DYNAMIC_DRAW );
 	}
 
 	if( UseBGRA )
@@ -214,7 +223,21 @@ void UNOpenGLESRenderDevice::Flush()
 		ResetTexture( 1 );
 		ResetTexture( 2 );
 		ResetTexture( 3 );
+#ifndef __vita__
 		glFinish();
+#else
+		for( INT i = 0; i < DynamicTextures.Num(); i++ )
+		{
+			FCachedTexture* Tex = BindMap.Find( DynamicTextures(i) );
+			if( Tex )
+			{
+				vglLazyFree(Tex->DataPtrs[0]);
+				vglLazyFree(Tex->DataPtrs[1]);
+				vglLazyFree(Tex->DataPtrs[2]);
+			}
+		}
+		DynamicTextures.Empty();
+#endif
 		glDeleteTextures( TexAlloc.Num(), &TexAlloc(0) );
 		TexAlloc.Empty();
 		BindMap.Empty();
@@ -893,6 +916,10 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 
 	FlushTriangles();
 
+#ifdef __vita__
+	bool isDynamic = Info.TextureFlags & TF_Realtime || !Info.Palette;
+#endif
+
 	// Make current.
 	Tex.CurrentCacheID = NewCacheID;
 	FCachedTexture* Bind = BindMap.Find( NewCacheID );
@@ -903,6 +930,18 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 		Bind = BindMap.Add( NewCacheID, FCachedTexture() );
 		glGenTextures( 1, &Bind->Id );
 		TexAlloc.AddItem( Bind->Id );
+#ifdef __vita__
+		if (isDynamic) {
+			for (int i = 0; i < 3; i++) {
+				if (Info.Mips[0]->USize < 8)
+					Bind->DataPtrs[i] = (void *)vglMalloc(8 * Info.Mips[0]->VSize * 4);
+				else
+					Bind->DataPtrs[i] = (void *)vglMalloc(Info.Mips[0]->USize * Info.Mips[0]->VSize * 4);
+			}
+			Bind->CurDataPtr = 0;
+			DynamicTextures.AddItem( NewCacheID );
+		}
+#endif
 	}
 
 	glActiveTexture( GL_TEXTURE0 + TMU );
@@ -912,6 +951,12 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	{
 		// New texture or it has changed, upload it.
 		Info.TextureFlags &= ~TF_RealtimeChanged;
+#ifdef __vita__
+		if (isDynamic) {
+			NextTexData = Bind->DataPtrs[Bind->CurDataPtr];
+			Bind->CurDataPtr = (Bind->CurDataPtr + 1) % 3;
+		}
+#endif
 		UploadTexture( Info, ( PolyFlags & PF_Masked ), !OldBind );
 		// TODO: This depends on PolyFlags, not Info.
 		UpdateTextureFilter( Info, PolyFlags );
@@ -929,13 +974,25 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		debugf( NAME_Warning, "Encountered texture with invalid mips!" );
 		return;
 	}
-
-	// We're gonna be using the compose buffer, so expand it to fit.
+	
+	BYTE *_Compose;
 	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
-	if( NewComposeSize > ComposeSize )
+#ifdef __vita__
+	bool isDynamic = Info.TextureFlags & TF_Realtime || !Info.Palette;
+	if (isDynamic)
 	{
-		Compose = (BYTE*)appRealloc( Compose, NewComposeSize, "GLComposeBuf" );
-		verify( Compose );
+		_Compose = (BYTE *)NextTexData;
+	}
+	else
+#endif
+	{
+		// We're gonna be using the compose buffer, so expand it to fit.
+		if( NewComposeSize > ComposeSize )
+		{
+			Compose = (BYTE*)appRealloc( Compose, NewComposeSize, "GLComposeBuf" );
+			verify( Compose );
+		}
+		_Compose = Compose;
 	}
 
 	// Upload all mips.
@@ -949,9 +1006,9 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		if( Info.Palette )
 		{
 			// 8-bit indexed. We have to fix the alpha component since it's mostly garbage in non-detailmaps.
-			UploadBuf = Compose;
+			UploadBuf = _Compose;
 			UploadFormat = GL_RGBA;
-			DWORD* Dst = (DWORD*)Compose;
+			DWORD* Dst = (DWORD*)_Compose;
 			const BYTE* Src = (const BYTE*)Mip->DataPtr;
 			const DWORD* Pal = (const DWORD*)Info.Palette;
 			const DWORD Count = Mip->USize * Mip->VSize;
@@ -988,16 +1045,34 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		}
 		else if( UseBGRA )
 		{
-			// BGRA8888 (or 7777) and we can upload it as-is.
-			UploadBuf = Mip->DataPtr;
+			// BGRA8888 (or 7777) and we can upload it as-is.		
+#ifdef __vita__
+			if (isDynamic && !NewTexture) {
+				// sceGxm has a minimum alignment of 8 pixels for linear textures
+				if (Mip->USize >= 8) {
+					sceClibMemcpy(_Compose, Mip->DataPtr, NewComposeSize);
+				} else {
+					BYTE *dst = (BYTE *)_Compose;
+					const BYTE *src = (const BYTE *)Mip->DataPtr;
+					for (int i = 0; i < Mip->VSize; i++) {
+						sceClibMemcpy(&dst[8 * i * 4], &src[i * Mip->USize * 4], Mip->USize * 4);
+					}
+				}
+				UploadBuf = _Compose;
+			}
+			else
+#endif
+			{
+				UploadBuf = Mip->DataPtr;
+			}
 			UploadFormat = GL_BGRA_EXT;
 		}
 		else
 		{
 			// BGRA8888 (or 7777), but we must swap it because it's not supported natively.
-			UploadBuf = Compose;
+			UploadBuf = _Compose;
 			UploadFormat = GL_RGBA;
-			BYTE* Dst = (BYTE*)Compose;
+			BYTE* Dst = (BYTE*)_Compose;
 			const BYTE* Src = (const BYTE*)Mip->DataPtr;
 			const DWORD Count = Mip->USize * Mip->VSize;
 			for( DWORD i = 0; i < Count; ++i, Src += 4 )
@@ -1008,11 +1083,24 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 				*Dst++ = Src[3];
 			}
 		}
+#ifndef __vita__
 		// Upload to GL.
 		if( NewTexture )
 			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
 		else
 			glTexSubImage2D( GL_TEXTURE_2D, MipIndex, 0, 0, Mip->USize, Mip->VSize, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+#else
+		if (isDynamic) {
+			if( NewTexture )
+				glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+			else {
+				SceGxmTexture *t = vglGetGxmTexture(GL_TEXTURE_2D);
+				sceGxmTextureSetData(t, (const void *)UploadBuf );
+			}
+		} else {
+			glTexImage2D( GL_TEXTURE_2D, MipIndex, UploadFormat, Mip->USize, Mip->VSize, 0, UploadFormat, GL_UNSIGNED_BYTE, (void*)UploadBuf );
+		}
+#endif
 	}
 
 	unguard;

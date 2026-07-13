@@ -73,9 +73,16 @@ class DLL_EXPORT UNOpenGLESRenderDevice : public URenderDevice
 		GLuint Id;
 		INT BaseMip;
 		INT MaxLevel;
+#ifdef __vita__
+		void *DataPtrs[3];
+		int CurDataPtr;
+#endif
 	};
 	TMap<QWORD, FCachedTexture> BindMap;
 	TArray<GLuint> TexAlloc;
+#ifdef __vita__
+	TArray<QWORD> DynamicTextures;
+#endif
 
 	// Currently bound textures.
 	struct FTexInfo
@@ -189,7 +196,7 @@ private:
 			check( IdxDataPtr <= IdxDataEnd );
 			check( VtxDataPtr <= VtxDataEnd );
 			if ( UseVAO )
-				glBufferSubData( GL_ARRAY_BUFFER, 0, ( (BYTE*)VtxDataPtr - (BYTE*)VtxData ), VtxData );
+				glBufferData( GL_ARRAY_BUFFER, ( (BYTE*)VtxDataPtr - (BYTE*)VtxData ), (void*)VtxData, GL_DYNAMIC_DRAW );
 			glDrawElements( GL_TRIANGLES, IdxDataPtr - IdxData, GL_UNSIGNED_SHORT, IdxData );
 			IdxCount = 0;
 		}

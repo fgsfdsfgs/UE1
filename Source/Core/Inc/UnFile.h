@@ -176,8 +176,13 @@ CORE_API void VARARGS appThrowf( const char* Fmt, ... );
 //
 // Normal timing.
 //
+#ifdef __vita__
+#define uclock(Timer)
+#define uunclock(Timer)
+#else
 #define uclock(Timer)   {Timer -= appCycles();}
 #define uunclock(Timer) {Timer += appCycles()-34;}
+#endif
 
 //
 // Performance critical timing.
@@ -373,9 +378,9 @@ CORE_API DOUBLE appPow( DOUBLE A, DOUBLE B );
 CORE_API UBOOL appIsNan( DOUBLE Value );
 CORE_API INT appRand();
 CORE_API FLOAT appFrand();
-CORE_API INT appRound( FLOAT Value );
-CORE_API INT appFloor( FLOAT Value );
-CORE_API INT appCeil( FLOAT Value );
+inline __attribute__((always_inline)) INT appRound( FLOAT Value ) { return (INT)(Value + 0.5f); }
+inline __attribute__((always_inline)) INT appFloor( FLOAT Value ) { return (INT)Value - (Value < (FLOAT)(INT)Value ? 1 : 0); }
+inline __attribute__((always_inline)) INT appCeil ( FLOAT Value ) { return (INT)Value + (Value > (FLOAT)(INT)Value ? 1 : 0); }
 
 /*-----------------------------------------------------------------------------
 	Memory functions.

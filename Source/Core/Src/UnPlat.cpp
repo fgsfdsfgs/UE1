@@ -6,6 +6,10 @@
 		* Created by Tim Sweeney
 =============================================================================*/
 
+#ifdef __vita__
+#include <vitasdk.h>
+#endif
+
 #if defined(PLATFORM_SDL)
 #include "SDL2/SDL.h"
 #elif defined(PLATFORM_MSVC)
@@ -748,6 +752,8 @@ CORE_API DOUBLE appSeconds()
 	static LARGE_INTEGER ret;
 	QueryPerformanceCounter(&ret);
 	return (DOUBLE)ret.QuadPart * GSecondsPerCycle;
+#elif defined(__vita__)
+	return (DOUBLE)sceKernelGetProcessTimeLow() * GSecondsPerCycle;
 #elif defined(PLATFORM_SDL)
 	return (DOUBLE)SDL_GetPerformanceCounter() * GSecondsPerCycle;
 #else
@@ -761,6 +767,8 @@ CORE_API DWORD appCycles()
 	static LARGE_INTEGER ret;
 	QueryPerformanceCounter(&ret);
 	return ret.LowPart;
+#elif defined(__vita__)
+	return sceKernelGetProcessTimeLow();
 #elif defined(PLATFORM_SDL)
 	return SDL_GetPerformanceCounter();
 #else

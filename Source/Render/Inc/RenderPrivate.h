@@ -368,9 +368,15 @@ inline FLOAT SqrtApprox   (FLOAT F)
 	return F;								// compiles to fld [F].
 }
 #else
+#ifdef __vita__
+inline FLOAT DivSqrtApprox(FLOAT F) { return 1.0f / __builtin_sqrtf(F); }
+inline FLOAT DivApprox    (FLOAT F) { return 1.0f / F; }
+inline FLOAT SqrtApprox   (FLOAT F) { return __builtin_sqrtf(F); }
+#else
 inline FLOAT DivSqrtApprox(FLOAT F) {return 1.0/appSqrt(F);}
 inline FLOAT DivApprox    (FLOAT F) {return 1.0/F;}
 inline FLOAT SqrtApprox   (FLOAT F) {return appSqrt(F);}
+#endif
 #endif
 
 /*------------------------------------------------------------------------------------
