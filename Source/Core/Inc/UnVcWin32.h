@@ -75,6 +75,11 @@ enum {CACHE_LINE_SIZE   = 32}; // Cache line size.
 
 #define GCC_USED
 
+// Always inline function; this can be defined in winnt.h
+#ifndef FORCEINLINE
+#define FORCEINLINE __forceinline
+#endif
+
 // Unsigned base types.
 typedef unsigned char		BYTE;		// 8-bit  unsigned.
 typedef unsigned short		_WORD;		// 16-bit unsigned.

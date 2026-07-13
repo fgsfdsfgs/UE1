@@ -378,9 +378,9 @@ CORE_API DOUBLE appPow( DOUBLE A, DOUBLE B );
 CORE_API UBOOL appIsNan( DOUBLE Value );
 CORE_API INT appRand();
 CORE_API FLOAT appFrand();
-inline __attribute__((always_inline)) INT appRound( FLOAT Value ) { return (INT)(Value + 0.5f); }
-inline __attribute__((always_inline)) INT appFloor( FLOAT Value ) { return (INT)Value - (Value < (FLOAT)(INT)Value ? 1 : 0); }
-inline __attribute__((always_inline)) INT appCeil ( FLOAT Value ) { return (INT)Value + (Value > (FLOAT)(INT)Value ? 1 : 0); }
+FORCEINLINE INT appRound( FLOAT Value ) { return (INT)(Value + 0.5f); }
+FORCEINLINE INT appFloor( FLOAT Value ) { return (INT)Value - (Value < (FLOAT)(INT)Value ? 1 : 0); }
+FORCEINLINE INT appCeil ( FLOAT Value ) { return (INT)Value + (Value > (FLOAT)(INT)Value ? 1 : 0); }
 
 /*-----------------------------------------------------------------------------
 	Memory functions.
