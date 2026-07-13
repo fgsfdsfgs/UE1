@@ -392,6 +392,19 @@ void UTexture::PostLoad()
 	Accumulator = 0;
 	LastUpdateTime = appSeconds();
 
+	// Generate mipmaps for detail textures.
+	if( !(TextureFlags & TF_Realtime) && !appStrcmp(GetParent()->GetName(), "Detail") )
+	{
+		CreateMips(1,0);
+		BYTE Color = Palette->BestMatch(FColor(127,127,127,0),RANGE_All);
+		for( INT MipLevel=1; MipLevel<Mips.Num(); MipLevel++ )
+		{
+			FMipmap& Dest = Mips(MipLevel);
+			for( int i=0; i<Dest.DataArray.Num(); i++ )
+				Dest.DataArray(i) = Color;
+		}
+	}
+
 	unguardobj;
 }
 IMPLEMENT_CLASS(UTexture);
