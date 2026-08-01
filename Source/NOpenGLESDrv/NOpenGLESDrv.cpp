@@ -109,8 +109,7 @@ UBOOL UNOpenGLESRenderDevice::Init( UViewport* InViewport )
 
 	UpdateSwapInterval();
 
-	ComposeSize = 256 * 256 * 4;
-	Compose = (BYTE*)appMalloc( ComposeSize, "GLComposeBuf" );
+	EnsureComposeSize( 256 * 256 * 4 );
 	verify( Compose );
 
 	VtxDataSize = 18 * MAX_VERTS; // should be enough for all attributes
@@ -964,6 +963,134 @@ void UNOpenGLESRenderDevice::SetTexture( INT TMU, FTextureInfo& Info, DWORD Poly
 	unguard;
 }
 
+void UNOpenGLESRenderDevice::EnsureComposeSize( const DWORD NewSize )
+{
+	if( NewSize > ComposeSize )
+	{
+		ComposeSize = NewSize;
+		Compose = (BYTE*)appRealloc( Compose, NewSize, "GLComposeBuf" );
+	}
+	verify( Compose );
+}
+
+void UNOpenGLESRenderDevice::ConvertTextureMipI8( const FMipmap* Mip, const FColor* Palette, const UBOOL Masked, BYTE*& UploadBuf, GLenum& UploadFormat, UBOOL IsDynamic )
+{
+	// 8-bit indexed. We have to fix the alpha component since it's mostly garbage in non-detailmaps.
+	const BYTE* Src = (const BYTE*)Mip->DataPtr;
+	const DWORD* Pal = (const DWORD*)Palette;
+	const DWORD Count = Mip->USize * Mip->VSize;
+	BYTE *_Compose;
+#ifdef PLATFORM_PSVITA
+	if (IsDynamic)
+	{
+		_Compose = (BYTE *)NextTexData;
+	}
+	else
+#endif
+	{
+		// We're gonna be using the compose buffer, so expand it to fit.
+		EnsureComposeSize( Count * 4 );
+		_Compose = Compose;
+	}
+	UploadBuf = _Compose;
+	UploadFormat = GL_RGBA;
+	DWORD* Dst = (DWORD*)_Compose;
+	if( Masked )
+	{
+		// index 0 is transparent
+#if __INTEL_BYTE_ORDER__
+		for( DWORD i = 0; i < Count; ++i, ++Src )
+			*Dst++ = *Src ? ( Pal[*Src] | ALPHA_MASK ) : 0;
+#else
+		for( DWORD i = 0; i < Count; ++i, ++Src )
+		{
+			FColor Color = Palette[*Src];
+			Color.A = *Src ? 255 : 0;
+			*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
+		}
+#endif
+	}
+	else
+	{
+		// index 0 is whatever
+#if __INTEL_BYTE_ORDER__
+		for( DWORD i = 0; i < Count; ++i )
+			*Dst++ = ( Pal[*Src++] | ALPHA_MASK );
+#else
+		for( DWORD i = 0; i < Count; ++i, ++Src )
+		{
+			FColor Color = Palette[*Src];
+			Color.A = 255;
+			*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
+		}
+#endif
+	}
+}
+
+void UNOpenGLESRenderDevice::ConvertTextureMipBGRA7777( const FMipmap* Mip, BYTE*& UploadBuf, GLenum& UploadFormat, UBOOL IsDynamic, UBOOL NewTexture )
+{
+	if( UseBGRA )
+	{
+		// BGRA8888 (or 7777) and we can upload it as-is.
+#ifdef PLATFORM_PSVITA
+		if (IsDynamic && !NewTexture)
+		{
+			BYTE *_Compose = (BYTE *)NextTexData;
+			INT NewComposeSize = Mip->USize * Mip->VSize * 4;
+			// sceGxm has a minimum alignment of 8 pixels for linear textures
+			if (Mip->USize >= 8)
+			{
+				sceClibMemcpy( _Compose, Mip->DataPtr, NewComposeSize );
+			}
+			else
+			{
+				BYTE *dst = (BYTE *)_Compose;
+				const BYTE *src = (const BYTE *)Mip->DataPtr;
+				for ( INT i = 0; i < Mip->VSize; i++ )
+				{
+					sceClibMemcpy( &dst[8 * i * 4], &src[i * Mip->USize * 4], Mip->USize * 4 );
+				}
+			}
+			UploadBuf = _Compose;
+		}
+		else
+#endif
+		{
+			UploadBuf = Mip->DataPtr;
+		}
+		UploadFormat = GL_BGRA_EXT;
+	}
+	else
+	{
+		// BGRA8888 (or 7777), but we must swap it because it's not supported natively.
+		const BYTE* Src = (const BYTE*)Mip->DataPtr;
+		const DWORD Count = Mip->USize * Mip->VSize;
+		BYTE *_Compose;
+#ifdef PLATFORM_PSVITA
+		if (IsDynamic)
+		{
+			_Compose = (BYTE *)NextTexData;
+		}
+		else
+#endif
+		{
+			// We're gonna be using the compose buffer, so expand it to fit.
+			EnsureComposeSize( Count * 4 );
+			_Compose = Compose;
+		}
+		UploadBuf = _Compose;
+		UploadFormat = GL_RGBA;
+		BYTE* Dst = (BYTE*)_Compose;
+		for( DWORD i = 0; i < Count; ++i, Src += 4 )
+		{
+			*Dst++ = Src[2];
+			*Dst++ = Src[1];
+			*Dst++ = Src[0];
+			*Dst++ = Src[3];
+		}
+	}
+}
+
 void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UBOOL NewTexture )
 {
 	guard(UNOpenGLESRenderDevice::UploadTexture);
@@ -974,25 +1101,7 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		return;
 	}
 	
-	BYTE *_Compose;
-	INT NewComposeSize = Info.Mips[0]->USize * Info.Mips[0]->VSize * 4;
-#ifdef PLATFORM_PSVITA
 	const bool bIsDynamic = Info.TextureFlags & TF_Realtime || !Info.Palette;
-	if (bIsDynamic)
-	{
-		_Compose = (BYTE *)NextTexData;
-	}
-	else
-#endif
-	{
-		// We're gonna be using the compose buffer, so expand it to fit.
-		if( NewComposeSize > ComposeSize )
-		{
-			Compose = (BYTE*)appRealloc( Compose, NewComposeSize, "GLComposeBuf" );
-			verify( Compose );
-		}
-		_Compose = Compose;
-	}
 
 	// Upload all mips.
 	for( INT MipIndex = 0; MipIndex < Info.NumMips; ++MipIndex )
@@ -1003,90 +1112,9 @@ void UNOpenGLESRenderDevice::UploadTexture( FTextureInfo& Info, UBOOL Masked, UB
 		GLenum UploadFormat;
 		// Convert texture if needed.
 		if( Info.Palette )
-		{
-			// 8-bit indexed. We have to fix the alpha component since it's mostly garbage in non-detailmaps.
-			UploadBuf = _Compose;
-			UploadFormat = GL_RGBA;
-			DWORD* Dst = (DWORD*)_Compose;
-			const BYTE* Src = (const BYTE*)Mip->DataPtr;
-			const DWORD* Pal = (const DWORD*)Info.Palette;
-			const DWORD Count = Mip->USize * Mip->VSize;
-			if( Masked )
-			{
-				// index 0 is transparent
-#if __INTEL_BYTE_ORDER__
-				for( DWORD i = 0; i < Count; ++i, ++Src )
-					*Dst++ = *Src ? ( Pal[*Src] | ALPHA_MASK ) : 0;
-#else
-				for( DWORD i = 0; i < Count; ++i, ++Src )
-				{
-					FColor Color = Info.Palette[*Src];
-					Color.A = *Src ? 255 : 0;
-					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
-				}
-#endif
-			}
-			else
-			{
-				// index 0 is whatever
-#if __INTEL_BYTE_ORDER__
-				for( DWORD i = 0; i < Count; ++i )
-					*Dst++ = ( Pal[*Src++] | ALPHA_MASK );
-#else
-				for( DWORD i = 0; i < Count; ++i, ++Src )
-				{
-					FColor Color = Info.Palette[*Src];
-					Color.A = 255;
-					*Dst++ = (Color.R << 24) | (Color.G << 16) | (Color.B << 8) | Color.A;
-				}
-#endif
-			}
-		}
-		else if( UseBGRA )
-		{
-			// BGRA8888 (or 7777) and we can upload it as-is.		
-#ifdef PLATFORM_PSVITA
-			if (bIsDynamic && !NewTexture)
-			{
-				// sceGxm has a minimum alignment of 8 pixels for linear textures
-				if (Mip->USize >= 8)
-				{
-					sceClibMemcpy( _Compose, Mip->DataPtr, NewComposeSize );
-				}
-				else
-				{
-					BYTE *dst = (BYTE *)_Compose;
-					const BYTE *src = (const BYTE *)Mip->DataPtr;
-					for ( INT i = 0; i < Mip->VSize; i++ )
-					{
-						sceClibMemcpy( &dst[8 * i * 4], &src[i * Mip->USize * 4], Mip->USize * 4 );
-					}
-				}
-				UploadBuf = _Compose;
-			}
-			else
-#endif
-			{
-				UploadBuf = Mip->DataPtr;
-			}
-			UploadFormat = GL_BGRA_EXT;
-		}
+			ConvertTextureMipI8( Mip, Info.Palette, Masked, UploadBuf, UploadFormat, bIsDynamic );
 		else
-		{
-			// BGRA8888 (or 7777), but we must swap it because it's not supported natively.
-			UploadBuf = _Compose;
-			UploadFormat = GL_RGBA;
-			BYTE* Dst = (BYTE*)_Compose;
-			const BYTE* Src = (const BYTE*)Mip->DataPtr;
-			const DWORD Count = Mip->USize * Mip->VSize;
-			for( DWORD i = 0; i < Count; ++i, Src += 4 )
-			{
-				*Dst++ = Src[2];
-				*Dst++ = Src[1];
-				*Dst++ = Src[0];
-				*Dst++ = Src[3];
-			}
-		}
+			ConvertTextureMipBGRA7777( Mip, UploadBuf, UploadFormat, bIsDynamic, NewTexture );
 
 		// Upload to GL.
 #ifndef PLATFORM_PSVITA
